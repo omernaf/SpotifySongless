@@ -18,6 +18,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+MUSIC_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../music_files"))
+
 class PlaylistRequest(BaseModel):
     url: str
 
@@ -44,15 +46,20 @@ def extract_songs(req: PlaylistRequest):
 
 @app.post("/download_mp3")
 def download_mp3(req: DownloadRequest):
-    mp3_path = open_top_youtube_result(req.query)
-    if not mp3_path or not os.path.exists(mp3_path):
-        raise HTTPException(status_code=500, detail="Download failed")
-    filename = os.path.basename(mp3_path)
-    return {"mp3_url": f"/music/{filename}"}
+    try:
+        mp3_path = open_top_youtube_result(req.query)
+        if not mp3_path or not os.path.exists(mp3_path):
+            print("Download failed. mp3_path:", mp3_path)
+            raise HTTPException(status_code=500, detail="Download failed")
+        filename = os.path.basename(mp3_path)
+        return {"mp3_url": f"/music/{filename}"}
+    except Exception as e:
+        print("Exception in download_mp3:", e)
+        raise HTTPException(status_code=500, detail=f"Download failed: {e}")
 
 @app.get("/music/{filename}")
 def get_mp3(filename: str):
-    file_path = os.path.join("music_files", filename)
+    file_path = os.path.join(MUSIC_DIR, filename)
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="File not found")
     return FileResponse(file_path, media_type="audio/mpeg", filename=filename)
