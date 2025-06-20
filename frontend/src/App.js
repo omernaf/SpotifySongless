@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import axios from "axios";
 
+const BACKEND_URL = "http://10.100.102.72:8000";
+
 function App() {
   const [playlistUrl, setPlaylistUrl] = useState("");
   const [songs, setSongs] = useState([]);
@@ -16,7 +18,7 @@ function App() {
     setCurrentSong("");
     setStatus("");
     try {
-      const res = await axios.post("http://localhost:8000/extract_songs", { url: playlistUrl });
+      const res = await axios.post(`${BACKEND_URL}/extract_songs`, { url: playlistUrl });
       setSongs(res.data.songs);
       if (res.data.songs.length === 0) setStatus("No songs found in this playlist.");
     } catch (e) {
@@ -30,8 +32,8 @@ function App() {
     setCurrentSong(display);
     setStatus("");
     try {
-      const res = await axios.post("http://localhost:8000/download_mp3", { query });
-      setMp3Url("http://localhost:8000" + res.data.mp3_url);
+      const res = await axios.post(`${BACKEND_URL}/download_mp3`, { query });
+      setMp3Url(BACKEND_URL + res.data.mp3_url);
       setStatus("Download complete!");
     } catch (e) {
       setStatus("Failed to download MP3. Try again.");
