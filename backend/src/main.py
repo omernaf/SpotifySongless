@@ -3,6 +3,8 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+import spotipy
+from spotipy.exceptions import SpotifyException
 
 from spotify_utils import sp, extract_playlist_id, is_hebrew, reverse_hebrew_words
 from youtube_utils import open_top_youtube_result
@@ -28,21 +30,37 @@ class DownloadRequest(BaseModel):
 
 @app.post("/extract_songs")
 def extract_songs(req: PlaylistRequest):
-    playlist_id = extract_playlist_id(req.url)
-    if not playlist_id:
-        raise HTTPException(status_code=400, detail="Invalid Spotify playlist URL")
-    results = sp.playlist_items(playlist_id)
-    songs = []
-    for item in results['items']:
-        track = item['track']
-        name = track['name']
-        artists = ', '.join([artist['name'] for artist in track['artists']])
-        display_text = f"{name} - {artists}"
-        if is_hebrew(name) or is_hebrew(artists):
-            display_text = reverse_hebrew_words(display_text)
-        query = f"{name} {artists}".replace('&', '')
-        songs.append({"display": display_text, "query": query})
-    return {"songs": songs}
+    try:
+        playlist_id = extract_playlist_id(req.url)
+        if not playlist_id:
+            raise HTTPException(status_code=400, detail="Invalid Spotify playlist URL")
+        results = sp.playlist_items(playlist_id)
+        songs = []
+        for item in results['items']:
+            track = item['track']
+            name = track['name']
+            artists = ', '.join([artist['name'] for artist in track['artists']])
+            display_text = f"{name} - {artists}"
+            if is_hebrew(name) or is_hebrew(artists):
+                display_text = reverse_hebrew_words(display_text)
+            query = f"{name} {artists}".replace('&', '')
+            songs.append({"display": display_text, "query": query})
+        return {"songs": songs}
+    except SpotifyException as e:
+        if e.http_status == 404:
+            raise HTTPException(
+                status_code=404,
+                detail="Spotify playlist not found. Please check the playlist URL or its privacy settings."
+            )
+        raise HTTPException(
+            status_code=500,
+            detail=f"Spotify API error: {e.msg} (status {e.http_status})"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal server error: {str(e)}"
+        )
 
 @app.post("/download_mp3")
 def download_mp3(req: DownloadRequest):
