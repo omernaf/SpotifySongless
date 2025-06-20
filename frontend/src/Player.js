@@ -98,7 +98,9 @@ export default function Player({
         color: "#2ecc71",
         fontWeight: "bold",
         textAlign: "center"
-      }}>{currentSong}</div>
+      }}>
+        {currentSong}
+      </div>
       {unlockStep < UNLOCK_STEPS.length - 1 && (
         <button
           onClick={handleSkip}

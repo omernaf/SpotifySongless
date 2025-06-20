@@ -4,6 +4,7 @@ import Player from "./Player";
 import { formatTime } from "./utils";
 import PlaylistInput from "./PlaylistInput";
 import StatusMessage from "./StatusMessage";
+import GuessBar from "./GuessBar";
 
 const BACKEND_URL = "http://10.100.102.72:8000";
 const UNLOCK_STEPS = [0.1, 0.5, 2, 4, 8, 15, 30, Infinity];
@@ -18,6 +19,10 @@ function App() {
   const [unlockStep, setUnlockStep] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [guessFeedback, setGuessFeedback] = useState("");
+  const [guessedCorrectly, setGuessedCorrectly] = useState(false);
+  const [guessHistory, setGuessHistory] = useState([]);
+  const [guessBarKey, setGuessBarKey] = useState(0);
   const audioRef = useRef(null);
 
   useEffect(() => {
@@ -36,12 +41,12 @@ function App() {
     setIsPlaying(false);
     const randomSong = songsList[Math.floor(Math.random() * songsList.length)];
     setCurrentSong(randomSong.display);
-    setStatus(`Downloading: ${randomSong.display}`);
+    setStatus("Downloading..."); // No song name here
     setLoading(true);
     try {
       const res = await axios.post(`${BACKEND_URL}/download_mp3`, { query: randomSong.query });
       setMp3Url(BACKEND_URL + res.data.mp3_url);
-      setStatus(`Now playing: ${randomSong.display}`);
+      setStatus(""); // No song name here either
     } catch (e) {
       setStatus("Failed to download MP3. Try again.");
       setMp3Url("");
@@ -73,6 +78,10 @@ function App() {
   };
 
   const playAnotherRandom = () => {
+    setGuessHistory([]);         // Clear guess history
+    setGuessFeedback("");        // Clear feedback
+    setGuessedCorrectly(false);  // Reset correct state
+    setGuessBarKey(prev => prev + 1); // Force GuessBar to reset input
     playRandomSong(songs);
   };
 
@@ -95,6 +104,7 @@ function App() {
   };
 
   const handleSkip = () => {
+    setGuessHistory(prev => [...prev, { type: "skip", value: `Skip to ${UNLOCK_STEPS[unlockStep + 1] === Infinity ? "All" : UNLOCK_STEPS[unlockStep + 1] + "s"}` }]);
     setUnlockStep((prev) => Math.min(prev + 1, UNLOCK_STEPS.length - 1));
     setTimeout(() => {
       if (audioRef.current) {
@@ -147,6 +157,23 @@ function App() {
     setCurrentTime(seekTime);
   };
 
+  const handleGuess = (guess) => {
+    if (!currentSong) return;
+    if (guess.trim().toLowerCase() === currentSong.trim().toLowerCase()) {
+      setGuessFeedback("🎉 Correct!");
+      setGuessedCorrectly(true);
+      setGuessHistory(prev => [...prev, { type: "guess", value: guess, correct: true }]);
+    } else {
+      setGuessFeedback("❌ Try again!");
+      setGuessedCorrectly(false);
+      setGuessHistory(prev => [...prev, { type: "guess", value: guess, correct: false }]);
+      // Auto skip to next length if possible
+      if (unlockStep < UNLOCK_STEPS.length - 1) {
+        handleSkip();
+      }
+    }
+  };
+
   return (
     <div style={{
       minHeight: "100vh",
@@ -183,25 +210,100 @@ function App() {
         />
         <StatusMessage status={status} />
         {mp3Url && (
-          <Player
-            audioRef={audioRef}
-            mp3Url={mp3Url}
-            isPlaying={isPlaying}
-            currentTime={currentTime}
-            getCurrentMax={getCurrentMax}
-            formatTime={formatTime}
-            handlePlayPause={handlePlayPause}
-            handleProgressBarClick={handleProgressBarClick}
-            handleSkip={handleSkip}
-            handleTimeUpdate={handleTimeUpdate}
-            handleSeek={handleSeek}
-            unlockStep={unlockStep}
-            UNLOCK_STEPS={UNLOCK_STEPS}
-            currentSong={currentSong}
-            loading={loading}
-            playAnotherRandom={playAnotherRandom}
-            songs={songs}
-          />
+          <>
+            <Player
+              audioRef={audioRef}
+              mp3Url={mp3Url}
+              isPlaying={isPlaying}
+              currentTime={currentTime}
+              getCurrentMax={getCurrentMax}
+              formatTime={formatTime}
+              handlePlayPause={handlePlayPause}
+              handleProgressBarClick={handleProgressBarClick}
+              handleSkip={handleSkip}
+              handleTimeUpdate={handleTimeUpdate}
+              handleSeek={handleSeek}
+              unlockStep={unlockStep}
+              UNLOCK_STEPS={UNLOCK_STEPS}
+              loading={loading}
+              playAnotherRandom={playAnotherRandom}
+              songs={songs}
+            />
+            <GuessBar
+              key={guessBarKey}
+              songs={songs}
+              onGuess={handleGuess}
+              disabled={guessedCorrectly}
+            />
+            <button
+              onClick={() => {
+                setUnlockStep(UNLOCK_STEPS.length - 1); // Unlock full song
+                setGuessedCorrectly(true); // Reveal the song name
+                setGuessHistory(prev => [...prev, { type: "giveup", value: "Gave up and revealed the song!" }]);
+              }}
+              disabled={guessedCorrectly}
+              style={{
+                marginTop: 12,
+                width: "100%",
+                background: "#e74c3c",
+                color: "#fff",
+                fontWeight: "bold",
+                fontSize: 16,
+                border: "none",
+                borderRadius: 8,
+                padding: "10px 0",
+                cursor: guessedCorrectly ? "not-allowed" : "pointer"
+              }}
+            >
+              Give Up & Reveal Song
+            </button>
+            {guessFeedback && (
+              <div style={{
+                color: guessedCorrectly ? "#2ecc71" : "#e74c3c",
+                fontWeight: "bold",
+                marginTop: 8,
+                textAlign: "center"
+              }}>
+                {guessFeedback}
+              </div>
+            )}
+            {guessedCorrectly && (
+              <div style={{
+                color: "#2ecc71",
+                fontWeight: "bold",
+                marginTop: 8,
+                textAlign: "center"
+              }}>
+                {currentSong}
+              </div>
+            )}
+            {guessHistory.length > 0 && (
+              <div style={{
+                marginTop: 16,
+                width: "100%",
+                background: "#232526",
+                borderRadius: 8,
+                padding: 12,
+                color: "#fff",
+                fontSize: 15,
+                maxHeight: 120,
+                overflowY: "auto"
+              }}>
+                <div style={{ fontWeight: "bold", marginBottom: 6 }}>History:</div>
+                {guessHistory.map((entry, idx) =>
+                  entry.type === "guess" ? (
+                    <div key={idx} style={{ color: entry.correct ? "#2ecc71" : "#e74c3c" }}>
+                      Guess: <b>{entry.value}</b> {entry.correct ? "✔️" : "❌"}
+                    </div>
+                  ) : (
+                    <div key={idx} style={{ color: "#f39c12" }}>
+                      {entry.value}
+                    </div>
+                  )
+                )}
+              </div>
+            )}
+          </>
         )}
         {loading && <div style={{ marginTop: 18, color: "#fff" }}>Loading...</div>}
       </div>
