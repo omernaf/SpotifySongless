@@ -60,6 +60,8 @@ export default function GuessBar({ songs, onGuess, disabled }) {
           position: "absolute",
           zIndex: 10,
           width: "calc(100% - 2px)",
+          maxHeight: 180, // Limit the height
+          overflowY: "auto" // Make it scrollable
         }}>
           {suggestions.map((title) => (
             <div

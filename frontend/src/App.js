@@ -174,6 +174,13 @@ function App() {
     }
   };
 
+  function reverseHebrewWords(str) {
+    // Match Hebrew words (Unicode range \u0590-\u05FF)
+    return str.replace(/[\u0590-\u05FF]+/g, word =>
+      word.split('').reverse().join('')
+    );
+  }
+
   return (
     <div style={{
       minHeight: "100vh",
@@ -274,7 +281,9 @@ function App() {
                 marginTop: 8,
                 textAlign: "center"
               }}>
-                {currentSong}
+                <span dir="auto" style={{ unicodeBidi: "isolate" }}>
+                  {reverseHebrewWords(currentSong)}
+                </span>
               </div>
             )}
             {guessHistory.length > 0 && (
@@ -293,11 +302,11 @@ function App() {
                 {guessHistory.map((entry, idx) =>
                   entry.type === "guess" ? (
                     <div key={idx} style={{ color: entry.correct ? "#2ecc71" : "#e74c3c" }}>
-                      Guess: <b>{entry.value}</b> {entry.correct ? "✔️" : "❌"}
+                      Guess: <b><span dir="auto">{entry.value}</span></b> {entry.correct ? "✔️" : "❌"}
                     </div>
                   ) : (
                     <div key={idx} style={{ color: "#f39c12" }}>
-                      {entry.value}
+                      <span dir="auto">{reverseHebrewWords(entry.value)}</span>
                     </div>
                   )
                 )}
