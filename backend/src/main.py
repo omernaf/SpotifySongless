@@ -1,5 +1,5 @@
 import os
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -81,6 +81,18 @@ def get_mp3(filename: str):
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="File not found")
     return FileResponse(file_path, media_type="audio/mpeg", filename=filename)
+
+@app.post("/delete_mp3")
+async def delete_mp3(request: Request):
+    data = await request.json()
+    filename = data.get("filename")
+    if not filename:
+        return {"status": "error", "detail": "No filename provided"}
+    file_path = os.path.join(MUSIC_DIR, filename)
+    if os.path.exists(file_path):
+        os.remove(file_path)
+        return {"status": "deleted"}
+    return {"status": "not_found"}
 
 if __name__ == "__main__":
     import uvicorn

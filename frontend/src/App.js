@@ -8,6 +8,24 @@ import GameScreen from "./GameScreen";
 const BACKEND_URL = "http://10.100.102.72:8000";
 const UNLOCK_STEPS = [0.5, 2, 4, 8, 15, 30, Infinity];
 
+// Helper to extract filename from mp3Url
+function getFilenameFromUrl(mp3Url) {
+  if (!mp3Url) return null;
+  const parts = mp3Url.split("/");
+  return parts[parts.length - 1];
+}
+
+// Call this whenever you want to delete the current song
+async function deleteCurrentSong(mp3Url) {
+  const filename = getFilenameFromUrl(mp3Url);
+  if (!filename) return;
+  try {
+    await axios.post(`${BACKEND_URL}/delete_mp3`, { filename });
+  } catch (e) {
+    // Optionally handle error
+  }
+}
+
 function App() {
   const [page, setPage] = useState("landing");
   const [playlistUrl, setPlaylistUrl] = useState("");
@@ -93,13 +111,15 @@ function App() {
     setLoading(false);
   };
 
-  const playAnotherRandom = () => {
-    setPage("loading");            // Show loading screen
-    setGuessHistory([]);           // Clear guess history
-    setGuessFeedback("");          // Clear feedback
-    setGuessedCorrectly(false);    // Reset correct state
-    setGuessBarKey(prev => prev + 1); // Force GuessBar to reset input
-    playRandomSong(songs);         // This will set page to "game" after download
+  // 1. When playing another random song
+  const playAnotherRandom = async () => {
+    await deleteCurrentSong(mp3Url);
+    setPage("loading");
+    setGuessHistory([]);
+    setGuessFeedback("");
+    setGuessedCorrectly(false);
+    setGuessBarKey(prev => prev + 1);
+    playRandomSong(songs);
   };
 
   const getCurrentMax = () => UNLOCK_STEPS[unlockStep];
@@ -191,6 +211,17 @@ function App() {
     }
   };
 
+  // 2. When exiting or refreshing (cleanup)
+  useEffect(() => {
+    const handleBeforeUnload = async () => {
+      await deleteCurrentSong(mp3Url);
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      handleBeforeUnload();
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [mp3Url]);
 
   if (page === "loading") return <LoadingScreen />;
   if (page === "game") return (
