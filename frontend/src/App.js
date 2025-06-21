@@ -4,6 +4,7 @@ import { formatTime } from "./utils";
 import LandingScreen from "./LandingScreen";
 import LoadingScreen from "./LoadingScreen";
 import GameScreen from "./GameScreen";
+import Cookies from "js-cookie";
 
 const BACKEND_URL = "http://10.100.102.72:8000";
 const UNLOCK_STEPS = [0.5, 2, 4, 8, 15, 30, Infinity];
@@ -26,6 +27,28 @@ async function deleteCurrentSong(mp3Url) {
   }
 }
 
+// Save playlist metadata to cookie
+function savePlaylistToCookie(playlistMeta) {
+  if (!playlistMeta || !playlistMeta.url) return;
+  let history = [];
+  try {
+    history = JSON.parse(Cookies.get("playlistHistory") || "[]");
+  } catch {}
+  history = history.filter(item => item.url !== playlistMeta.url);
+  history.unshift(playlistMeta);
+  if (history.length > 3) history = history.slice(0, 3);
+  Cookies.set("playlistHistory", JSON.stringify(history), { expires: 365 });
+}
+
+// Read playlist history from cookie
+function getPlaylistHistoryFromCookie() {
+  try {
+    return JSON.parse(Cookies.get("playlistHistory") || "[]");
+  } catch {
+    return [];
+  }
+}
+
 function App() {
   const [page, setPage] = useState("landing");
   const [playlistUrl, setPlaylistUrl] = useState("");
@@ -41,7 +64,12 @@ function App() {
   const [guessedCorrectly, setGuessedCorrectly] = useState(false);
   const [guessHistory, setGuessHistory] = useState([]);
   const [guessBarKey, setGuessBarKey] = useState(0);
+  const [playlistHistory, setPlaylistHistory] = useState([]);
   const audioRef = useRef(null);
+
+  useEffect(() => {
+    setPlaylistHistory(getPlaylistHistoryFromCookie());
+  }, []);
 
   useEffect(() => {
     if (audioRef.current) {
@@ -92,7 +120,16 @@ function App() {
         setStatus("No songs found in this playlist.");
         setPage("landing");
       } else {
-        playRandomSong(res.data.songs); // Don't setPage("game") here!
+        // Save playlist metadata to cookie
+        const playlistMeta = {
+          url: playlistUrl,
+          name: res.data.name || "Unknown Playlist",
+          owner: res.data.owner || "",
+          songCount: res.data.songs.length,
+        };
+        savePlaylistToCookie(playlistMeta);
+        setPlaylistHistory(getPlaylistHistoryFromCookie());
+        playRandomSong(res.data.songs);
       }
     } catch (e) {
       let errorMsg = "Failed to extract songs. ";
@@ -259,6 +296,7 @@ function App() {
       setPlaylistUrl={setPlaylistUrl}
       onStart={handleStart}
       status={status}
+      playlistHistory={playlistHistory}
     />
   );
 }

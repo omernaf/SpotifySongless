@@ -1,6 +1,6 @@
 import React from "react";
 
-export default function LandingScreen({ playlistUrl, setPlaylistUrl, onStart, status }) {
+export default function LandingScreen({ playlistUrl, setPlaylistUrl, onStart, status, playlistHistory }) {
   return (
     <div style={{
       minHeight: "100vh",
@@ -43,6 +43,35 @@ export default function LandingScreen({ playlistUrl, setPlaylistUrl, onStart, st
             marginBottom: 16
           }}
         />
+        {playlistHistory.length > 0 && (
+          <div style={{ marginBottom: 12, width: "100%" }}>
+            <div style={{ color: "#aaa", fontSize: 14, marginBottom: 4 }}>Recent:</div>
+            {playlistHistory.map((item, idx) => (
+              <button
+                key={idx}
+                onClick={() => setPlaylistUrl(item.url)}
+                style={{
+                  width: "100%",
+                  marginBottom: 4,
+                  background: "#232526",
+                  color: "#2ecc71",
+                  border: "1px solid #2ecc71",
+                  borderRadius: 6,
+                  padding: "6px 0",
+                  cursor: "pointer",
+                  fontSize: 14,
+                  textAlign: "left"
+                }}
+              >
+                <b>{item.name}</b>
+                {item.owner && <span style={{ color: "#aaa" }}> by {item.owner}</span>}
+                {typeof item.songCount === "number" && (
+                  <span style={{ color: "#aaa" }}> ({item.songCount} songs)</span>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
         <button
           onClick={onStart}
           style={{
