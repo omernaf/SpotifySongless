@@ -1,10 +1,5 @@
 import React, { useState } from "react";
-
-function reverseHebrewWords(str) {
-  return str.replace(/[\u0590-\u05FF]+/g, (word) =>
-    word.split("").reverse().join("")
-  );
-}
+import { reverseHebrewWords } from "./utils";
 
 export default function GuessBar({ songs, onGuess, disabled }) {
   const [input, setInput] = useState("");
@@ -41,7 +36,7 @@ export default function GuessBar({ songs, onGuess, disabled }) {
     <form onSubmit={handleSubmit} style={{ width: "100%", marginTop: 16 }}>
       <input
         type="text"
-        value={input}
+        value={reverseHebrewWords(input)}
         onChange={handleChange}
         placeholder="Guess the song..."
         disabled={disabled}

@@ -121,7 +121,7 @@ export default function GameScreen(props) {
             {guessHistory.map((entry, idx) =>
               entry.type === "guess" ? (
                 <div key={idx} style={{ color: entry.correct ? "#2ecc71" : "#e74c3c" }}>
-                  Guess: <b><span dir="auto">{entry.value}</span></b> {entry.correct ? "✔️" : "❌"}
+                  Guess: <b><span dir="auto">{reverseHebrewWords(entry.value)}</span></b> {entry.correct ? "✔️" : "❌"}
                 </div>
               ) : (
                 <div key={idx} style={{ color: "#f39c12" }}>
