@@ -72,7 +72,17 @@ function App() {
         playRandomSong(res.data.songs);
       }
     } catch (e) {
-      setStatus("Failed to extract songs. Check your playlist URL and backend.");
+      let errorMsg = "Failed to extract songs. ";
+      if (e.response && e.response.data && e.response.data.detail) {
+        errorMsg += `Reason: ${e.response.data.detail}`;
+      } else if (e.response && e.response.data) {
+        errorMsg += `Reason: ${JSON.stringify(e.response.data)}`;
+      } else if (e.message) {
+        errorMsg += `Error: ${e.message}`;
+      } else {
+        errorMsg += "Unknown error.";
+      }
+      setStatus(errorMsg);
     }
     setLoading(false);
   };

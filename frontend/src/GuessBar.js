@@ -1,5 +1,11 @@
 import React, { useState } from "react";
 
+function reverseHebrewWords(str) {
+  return str.replace(/[\u0590-\u05FF]+/g, (word) =>
+    word.split("").reverse().join("")
+  );
+}
+
 export default function GuessBar({ songs, onGuess, disabled }) {
   const [input, setInput] = useState("");
   const [suggestions, setSuggestions] = useState([]);
@@ -52,17 +58,19 @@ export default function GuessBar({ songs, onGuess, disabled }) {
         autoComplete="off"
       />
       {suggestions.length > 0 && (
-        <div style={{
-          background: "#232526",
-          border: "1px solid #444",
-          borderRadius: 8,
-          marginTop: 2,
-          position: "absolute",
-          zIndex: 10,
-          width: "calc(100% - 2px)",
-          maxHeight: 180, // Limit the height
-          overflowY: "auto" // Make it scrollable
-        }}>
+        <div
+          style={{
+            background: "#232526",
+            border: "1px solid #444",
+            borderRadius: 8,
+            marginTop: 2,
+            position: "absolute",
+            zIndex: 10,
+            width: "calc(100% - 2px)",
+            maxHeight: 180,
+            overflowY: "auto",
+          }}
+        >
           {suggestions.map((title) => (
             <div
               key={title}
@@ -70,10 +78,10 @@ export default function GuessBar({ songs, onGuess, disabled }) {
               style={{
                 padding: "8px 12px",
                 cursor: "pointer",
-                color: "#fff"
+                color: "#fff",
               }}
             >
-              {title}
+              <span dir="auto">{reverseHebrewWords(title)}</span>
             </div>
           ))}
         </div>
