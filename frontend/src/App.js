@@ -1,15 +1,15 @@
 import React, { useState, useRef, useEffect } from "react";
 import axios from "axios";
-import Player from "./Player";
 import { formatTime } from "./utils";
-import PlaylistInput from "./PlaylistInput";
-import StatusMessage from "./StatusMessage";
-import GuessBar from "./GuessBar";
+import LandingScreen from "./LandingScreen";
+import LoadingScreen from "./LoadingScreen";
+import GameScreen from "./GameScreen";
 
 const BACKEND_URL = "http://10.100.102.72:8000";
-const UNLOCK_STEPS = [0.1, 0.5, 2, 4, 8, 15, 30, Infinity];
+const UNLOCK_STEPS = [0.5, 2, 4, 8, 15, 30, Infinity];
 
 function App() {
+  const [page, setPage] = useState("landing");
   const [playlistUrl, setPlaylistUrl] = useState("");
   const [songs, setSongs] = useState([]);
   const [mp3Url, setMp3Url] = useState("");
@@ -26,12 +26,13 @@ function App() {
   const audioRef = useRef(null);
 
   useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
     setCurrentTime(0);
     setIsPlaying(false);
-    if (audioRef.current) {
-      audioRef.current.currentTime = 0;
-      audioRef.current.pause();
-    }
+    // Do NOT call play() here. Wait for user action or a clear event.
   }, [mp3Url]);
 
   const playRandomSong = async (songsList) => {
@@ -41,25 +42,28 @@ function App() {
     setIsPlaying(false);
     const randomSong = songsList[Math.floor(Math.random() * songsList.length)];
     setCurrentSong(randomSong.display);
-    setStatus("Downloading..."); // No song name here
+    setStatus("Downloading...");
     setLoading(true);
     try {
       const res = await axios.post(`${BACKEND_URL}/download_mp3`, { query: randomSong.query });
       setMp3Url(BACKEND_URL + res.data.mp3_url);
-      setStatus(""); // No song name here either
+      setStatus("");
+      setPage("game"); // <-- Move this here, after download
     } catch (e) {
       setStatus("Failed to download MP3. Try again.");
       setMp3Url("");
+      setPage("landing"); // Optional: go back to landing on error
     }
     setLoading(false);
   };
 
-  const extractSongs = async () => {
+  const handleStart = async () => {
+    setPage("loading");
+    setStatus("");
     setLoading(true);
     setSongs([]);
     setMp3Url("");
     setCurrentSong("");
-    setStatus("");
     setUnlockStep(0);
     setCurrentTime(0);
     setIsPlaying(false);
@@ -68,8 +72,9 @@ function App() {
       setSongs(res.data.songs);
       if (res.data.songs.length === 0) {
         setStatus("No songs found in this playlist.");
+        setPage("landing");
       } else {
-        playRandomSong(res.data.songs);
+        playRandomSong(res.data.songs); // Don't setPage("game") here!
       }
     } catch (e) {
       let errorMsg = "Failed to extract songs. ";
@@ -83,16 +88,18 @@ function App() {
         errorMsg += "Unknown error.";
       }
       setStatus(errorMsg);
+      setPage("landing");
     }
     setLoading(false);
   };
 
   const playAnotherRandom = () => {
-    setGuessHistory([]);         // Clear guess history
-    setGuessFeedback("");        // Clear feedback
-    setGuessedCorrectly(false);  // Reset correct state
+    setPage("loading");            // Show loading screen
+    setGuessHistory([]);           // Clear guess history
+    setGuessFeedback("");          // Clear feedback
+    setGuessedCorrectly(false);    // Reset correct state
     setGuessBarKey(prev => prev + 1); // Force GuessBar to reset input
-    playRandomSong(songs);
+    playRandomSong(songs);         // This will set page to "game" after download
   };
 
   const getCurrentMax = () => UNLOCK_STEPS[unlockStep];
@@ -184,149 +191,44 @@ function App() {
     }
   };
 
-  function reverseHebrewWords(str) {
-    // Match Hebrew words (Unicode range \u0590-\u05FF)
-    return str.replace(/[\u0590-\u05FF]+/g, word =>
-      word.split('').reverse().join('')
-    );
-  }
 
+  if (page === "loading") return <LoadingScreen />;
+  if (page === "game") return (
+    <GameScreen
+      mp3Url={mp3Url}
+      audioRef={audioRef}
+      isPlaying={isPlaying}
+      currentTime={currentTime}
+      getCurrentMax={() => UNLOCK_STEPS[unlockStep]}
+      formatTime={formatTime}
+      handlePlayPause={handlePlayPause}
+      handleProgressBarClick={handleProgressBarClick}
+      handleSkip={handleSkip}
+      handleTimeUpdate={handleTimeUpdate}
+      handleSeek={handleSeek}
+      unlockStep={unlockStep}
+      UNLOCK_STEPS={UNLOCK_STEPS}
+      loading={loading}
+      playAnotherRandom={playAnotherRandom}
+      songs={songs}
+      guessBarKey={guessBarKey}
+      guessedCorrectly={guessedCorrectly}
+      guessFeedback={guessFeedback}
+      guessHistory={guessHistory}
+      handleGuess={handleGuess}
+      currentSong={currentSong}
+      setUnlockStep={setUnlockStep}
+      setGuessedCorrectly={setGuessedCorrectly}
+      setGuessHistory={setGuessHistory}
+    />
+  );
   return (
-    <div style={{
-      minHeight: "100vh",
-      background: "linear-gradient(135deg, #232526 0%, #414345 100%)",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center"
-    }}>
-      <div style={{
-        background: "rgba(30,32,36,0.97)",
-        borderRadius: 20,
-        boxShadow: "0 8px 32px 0 rgba(31,38,135,0.37)",
-        padding: 40,
-        width: 480,
-        maxWidth: "95vw",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center"
-      }}>
-        <h2 style={{
-          color: "#2ecc71",
-          fontWeight: "bold",
-          fontSize: 32,
-          marginBottom: 24,
-          textShadow: "1px 1px 4px #000"
-        }}>
-          Spotify Playlist Song Extractor
-        </h2>
-        <PlaylistInput
-          playlistUrl={playlistUrl}
-          setPlaylistUrl={setPlaylistUrl}
-          extractSongs={extractSongs}
-          loading={loading}
-        />
-        <StatusMessage status={status} />
-        {mp3Url && (
-          <>
-            <Player
-              audioRef={audioRef}
-              mp3Url={mp3Url}
-              isPlaying={isPlaying}
-              currentTime={currentTime}
-              getCurrentMax={getCurrentMax}
-              formatTime={formatTime}
-              handlePlayPause={handlePlayPause}
-              handleProgressBarClick={handleProgressBarClick}
-              handleSkip={handleSkip}
-              handleTimeUpdate={handleTimeUpdate}
-              handleSeek={handleSeek}
-              unlockStep={unlockStep}
-              UNLOCK_STEPS={UNLOCK_STEPS}
-              loading={loading}
-              playAnotherRandom={playAnotherRandom}
-              songs={songs}
-            />
-            <GuessBar
-              key={guessBarKey}
-              songs={songs}
-              onGuess={handleGuess}
-              disabled={guessedCorrectly}
-            />
-            <button
-              onClick={() => {
-                setUnlockStep(UNLOCK_STEPS.length - 1); // Unlock full song
-                setGuessedCorrectly(true); // Reveal the song name
-                setGuessHistory(prev => [...prev, { type: "giveup", value: "Gave up and revealed the song!" }]);
-              }}
-              disabled={guessedCorrectly}
-              style={{
-                marginTop: 12,
-                width: "100%",
-                background: "#e74c3c",
-                color: "#fff",
-                fontWeight: "bold",
-                fontSize: 16,
-                border: "none",
-                borderRadius: 8,
-                padding: "10px 0",
-                cursor: guessedCorrectly ? "not-allowed" : "pointer"
-              }}
-            >
-              Give Up & Reveal Song
-            </button>
-            {guessFeedback && (
-              <div style={{
-                color: guessedCorrectly ? "#2ecc71" : "#e74c3c",
-                fontWeight: "bold",
-                marginTop: 8,
-                textAlign: "center"
-              }}>
-                {guessFeedback}
-              </div>
-            )}
-            {guessedCorrectly && (
-              <div style={{
-                color: "#2ecc71",
-                fontWeight: "bold",
-                marginTop: 8,
-                textAlign: "center"
-              }}>
-                <span dir="auto" style={{ unicodeBidi: "isolate" }}>
-                  {reverseHebrewWords(currentSong)}
-                </span>
-              </div>
-            )}
-            {guessHistory.length > 0 && (
-              <div style={{
-                marginTop: 16,
-                width: "100%",
-                background: "#232526",
-                borderRadius: 8,
-                padding: 12,
-                color: "#fff",
-                fontSize: 15,
-                maxHeight: 120,
-                overflowY: "auto"
-              }}>
-                <div style={{ fontWeight: "bold", marginBottom: 6 }}>History:</div>
-                {guessHistory.map((entry, idx) =>
-                  entry.type === "guess" ? (
-                    <div key={idx} style={{ color: entry.correct ? "#2ecc71" : "#e74c3c" }}>
-                      Guess: <b><span dir="auto">{entry.value}</span></b> {entry.correct ? "✔️" : "❌"}
-                    </div>
-                  ) : (
-                    <div key={idx} style={{ color: "#f39c12" }}>
-                      <span dir="auto">{reverseHebrewWords(entry.value)}</span>
-                    </div>
-                  )
-                )}
-              </div>
-            )}
-          </>
-        )}
-        {loading && <div style={{ marginTop: 18, color: "#fff" }}>Loading...</div>}
-      </div>
-    </div>
+    <LandingScreen
+      playlistUrl={playlistUrl}
+      setPlaylistUrl={setPlaylistUrl}
+      onStart={handleStart}
+      status={status}
+    />
   );
 }
 
