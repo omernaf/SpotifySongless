@@ -260,6 +260,11 @@ function App() {
     };
   }, [mp3Url]);
 
+  const handleReturnToLanding = async () => {
+    await deleteCurrentSong(mp3Url); // Optional: clean up current song
+    setPage("landing");
+  };
+
   if (page === "loading") return <LoadingScreen />;
   if (page === "game") return (
     <GameScreen
@@ -288,6 +293,7 @@ function App() {
       setUnlockStep={setUnlockStep}
       setGuessedCorrectly={setGuessedCorrectly}
       setGuessHistory={setGuessHistory}
+      onReturnToLanding={handleReturnToLanding}
     />
   );
   return (

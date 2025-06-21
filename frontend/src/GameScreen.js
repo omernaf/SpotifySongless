@@ -10,6 +10,7 @@ export default function GameScreen(props) {
     unlockStep, UNLOCK_STEPS, loading, playAnotherRandom, songs, guessBarKey,
     guessedCorrectly, guessFeedback, guessHistory, handleGuess, currentSong,
     setUnlockStep, setGuessedCorrectly, setGuessHistory,
+    onReturnToLanding,
   } = props;
 
   return (
@@ -131,6 +132,23 @@ export default function GameScreen(props) {
             )}
           </div>
         )}
+        <button
+          onClick={onReturnToLanding}
+          style={{
+            marginTop: 16,
+            width: "100%",
+            background: "#444",
+            color: "#fff",
+            fontWeight: "bold",
+            fontSize: 16,
+            border: "none",
+            borderRadius: 8,
+            padding: "10px 0",
+            cursor: "pointer"
+          }}
+        >
+          Return to Home Page
+        </button>
       </div>
     </div>
   );
