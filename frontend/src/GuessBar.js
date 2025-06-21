@@ -8,12 +8,21 @@ export default function GuessBar({ songs, onGuess, disabled }) {
   const handleChange = (e) => {
     const value = e.target.value;
     setInput(value);
+
+    // Helper to check if string contains Hebrew
+    const isHebrew = (str) => /[\u0590-\u05FF]/.test(str);
+
+    let compareValue = value;
+    if (isHebrew(value)) {
+      compareValue = reverseHebrewWords(value);
+    }
+
     if (value.length > 0) {
       setSuggestions(
         songs
           .map((s) => s.display)
           .filter((title) =>
-            title.toLowerCase().includes(value.toLowerCase())
+            title.toLowerCase().includes(compareValue.toLowerCase())
           )
       );
     } else {
@@ -22,7 +31,7 @@ export default function GuessBar({ songs, onGuess, disabled }) {
   };
 
   const handleSelect = (title) => {
-    setInput(title);
+    setInput("");           // Clear input after selection
     setSuggestions([]);
     onGuess(title);
   };
@@ -30,13 +39,15 @@ export default function GuessBar({ songs, onGuess, disabled }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     onGuess(input);
+    setInput("");           // Clear input after submitting a guess
+    setSuggestions([]);
   };
 
   return (
     <form onSubmit={handleSubmit} style={{ width: "100%", marginTop: 16 }}>
       <input
         type="text"
-        value={reverseHebrewWords(input)}
+        value={input} // ✅ Show the raw input as typed
         onChange={handleChange}
         placeholder="Guess the song..."
         disabled={disabled}
