@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+spotipy
+pydub
+python-multipart
+requests
+# If you use YouTube downloads, you may need:
+yt-dlp
+# For CORS support
+starlette
+# For audio processing, pydub requires ffmpeg installed on your system (not via pip)
