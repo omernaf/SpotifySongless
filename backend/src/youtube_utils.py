@@ -1,4 +1,3 @@
-from kivy.clock import Clock
 import os
 import yt_dlp
 import requests
@@ -14,8 +13,9 @@ def open_top_youtube_result(query, status_label=None, progress_bar=None):
     response = requests.get(search_url, headers={'User-Agent': 'Mozilla/5.0'})
     video_ids = re.findall(r"watch\?v=(\S{11})", response.text)
     if not video_ids:
-        if status_label:
-            Clock.schedule_once(lambda dt: setattr(status_label, 'text', "No YouTube results found."))
+        # If running in backend, just print/log the error
+        if status_label is not None:
+            print("No YouTube results found.")
         return None
 
     top_url = f"https://www.youtube.com/watch?v={video_ids[0]}"
@@ -46,10 +46,10 @@ def open_top_youtube_result(query, status_label=None, progress_bar=None):
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         ydl.download([top_url])
-    if status_label:
-        Clock.schedule_once(lambda dt: setattr(status_label, 'text', "Download complete!"))
-    if progress_bar:
-        Clock.schedule_once(lambda dt: setattr(progress_bar, 'value', 0), 1)
+    if status_label is not None:
+        print("Download complete!")
+    if progress_bar is not None:
+        print("Progress bar reset (not applicable in backend).")
 
     # Fallback: find the newest mp3 in output_dir if hook failed
     mp3_path = mp3_path_holder.get('path')

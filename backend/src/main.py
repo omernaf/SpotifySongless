@@ -20,7 +20,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-MUSIC_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../music_files"))
+MUSIC_DIR = os.environ.get("MUSIC_DIR") or os.path.abspath(os.path.join(os.path.dirname(__file__), "../music_files"))
 
 class PlaylistRequest(BaseModel):
     url: str

@@ -6,7 +6,7 @@ import LoadingScreen from "./LoadingScreen";
 import GameScreen from "./GameScreen";
 import Cookies from "js-cookie";
 
-const BACKEND_URL = "http://10.100.102.72:8000";
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "";
 const UNLOCK_STEPS = [0.5, 2, 4, 8, 15, 30, Infinity];
 
 // Helper to extract filename from mp3Url
