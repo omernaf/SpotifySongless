@@ -114,7 +114,7 @@ function App() {
     setCurrentTime(0);
     setIsPlaying(false);
     try {
-      console.log("API URL:", process.env.REACT_APP_BACKEND_URL);
+      console.log("API URL:", process.env);
       const res = await axios.post(`${BACKEND_URL}/extract_songs`, { url: playlistUrl });
       setSongs(res.data.songs);
       if (res.data.songs.length === 0) {
