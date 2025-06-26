@@ -1,16 +1,16 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { reverseHebrewWords } from "./utils";
 
 export default function GuessBar({ songs, onGuess, disabled }) {
   const [input, setInput] = useState("");
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const dropdownRef = useRef(null);
 
   const handleChange = (e) => {
     const value = e.target.value;
     setInput(value);
 
-    // Helper to check if string contains Hebrew
     const isHebrew = (str) => /[\u0590-\u05FF]/.test(str);
 
     let compareValue = value;
@@ -18,34 +18,41 @@ export default function GuessBar({ songs, onGuess, disabled }) {
       compareValue = reverseHebrewWords(value);
     }
 
+    let filtered = [];
     if (value.length > 0) {
-      setSuggestions(
-        songs
-          .map((s) => s.display)
-          .filter((title) =>
-            title.toLowerCase().includes(compareValue.toLowerCase())
-          )
+      filtered = songs.filter((s) =>
+        s.display.toLowerCase().includes(compareValue.toLowerCase())
       );
+      // Sort: exact match first, then startsWith, then others
+      filtered.sort((a, b) => {
+        const aDisp = a.display.toLowerCase();
+        const bDisp = b.display.toLowerCase();
+        if (aDisp === compareValue.toLowerCase()) return -1;
+        if (bDisp === compareValue.toLowerCase()) return 1;
+        if (aDisp.startsWith(compareValue.toLowerCase())) return -1;
+        if (bDisp.startsWith(compareValue.toLowerCase())) return 1;
+        return aDisp.localeCompare(bDisp);
+      });
     } else {
-      setSuggestions(songs.map((s) => s.display)); // Show all songs if input is empty
+      filtered = songs;
     }
+    setSuggestions(filtered);
     setShowSuggestions(true);
   };
 
   const handleFocus = () => {
     if (input.length === 0) {
-      setSuggestions(songs.map((s) => s.display)); // Show all songs on focus if input is empty
+      setSuggestions(songs);
     }
     setShowSuggestions(true);
   };
 
   const handleBlur = () => {
-    // Delay hiding to allow click on suggestion
     setTimeout(() => setShowSuggestions(false), 100);
   };
 
   const handleSelect = (title) => {
-    setInput("");           // Clear input after selection
+    setInput("");
     setSuggestions([]);
     setShowSuggestions(false);
     onGuess(title);
@@ -54,16 +61,30 @@ export default function GuessBar({ songs, onGuess, disabled }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     onGuess(input);
-    setInput("");           // Clear input after submitting a guess
+    setInput("");
     setSuggestions([]);
     setShowSuggestions(false);
+  };
+
+  // Prevent page scroll when scrolling inside the dropdown
+  const handleTouchMove = (e) => {
+    const el = dropdownRef.current;
+    if (!el) return;
+    const { scrollTop, scrollHeight, clientHeight } = el;
+    if (
+      (scrollTop === 0 && e.touches[0].clientY > 0) ||
+      (scrollTop + clientHeight === scrollHeight && e.touches[0].clientY < 0)
+    ) {
+      e.preventDefault();
+    }
+    e.stopPropagation();
   };
 
   return (
     <form onSubmit={handleSubmit} style={{ width: "100%", marginTop: 16, position: "relative" }}>
       <input
         type="text"
-        value={input} // ✅ Show the raw input as typed
+        value={input}
         onChange={handleChange}
         onFocus={handleFocus}
         onBlur={handleBlur}
@@ -83,6 +104,7 @@ export default function GuessBar({ songs, onGuess, disabled }) {
       />
       {showSuggestions && suggestions.length > 0 && (
         <div
+          ref={dropdownRef}
           style={{
             background: "#232526",
             border: "1px solid #444",
@@ -93,21 +115,22 @@ export default function GuessBar({ songs, onGuess, disabled }) {
             width: "calc(100% - 2px)",
             maxHeight: 180,
             overflowY: "auto",
-            WebkitOverflowScrolling: "touch", // <-- for iOS momentum scroll
-            touchAction: "pan-y",             // <-- for better touch scroll
+            WebkitOverflowScrolling: "touch",
+            touchAction: "pan-y",
           }}
+          onTouchMove={handleTouchMove}
         >
-          {suggestions.map((title) => (
+          {suggestions.map((song, idx) => (
             <div
-              key={title}
-              onMouseDown={() => handleSelect(title)}
+              key={song.id || song.display + idx}
+              onMouseDown={() => handleSelect(song.display)}
               style={{
                 padding: "8px 12px",
                 cursor: "pointer",
                 color: "#fff",
               }}
             >
-              <span dir="auto">{reverseHebrewWords(title)}</span>
+              <span dir="auto">{reverseHebrewWords(song.display)}</span>
             </div>
           ))}
         </div>
