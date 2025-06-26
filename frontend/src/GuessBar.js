@@ -4,6 +4,7 @@ import { reverseHebrewWords } from "./utils";
 export default function GuessBar({ songs, onGuess, disabled }) {
   const [input, setInput] = useState("");
   const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
   const handleChange = (e) => {
     const value = e.target.value;
@@ -26,13 +27,27 @@ export default function GuessBar({ songs, onGuess, disabled }) {
           )
       );
     } else {
-      setSuggestions([]);
+      setSuggestions(songs.map((s) => s.display)); // Show all songs if input is empty
     }
+    setShowSuggestions(true);
+  };
+
+  const handleFocus = () => {
+    if (input.length === 0) {
+      setSuggestions(songs.map((s) => s.display)); // Show all songs on focus if input is empty
+    }
+    setShowSuggestions(true);
+  };
+
+  const handleBlur = () => {
+    // Delay hiding to allow click on suggestion
+    setTimeout(() => setShowSuggestions(false), 100);
   };
 
   const handleSelect = (title) => {
     setInput("");           // Clear input after selection
     setSuggestions([]);
+    setShowSuggestions(false);
     onGuess(title);
   };
 
@@ -41,14 +56,17 @@ export default function GuessBar({ songs, onGuess, disabled }) {
     onGuess(input);
     setInput("");           // Clear input after submitting a guess
     setSuggestions([]);
+    setShowSuggestions(false);
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{ width: "100%", marginTop: 16 }}>
+    <form onSubmit={handleSubmit} style={{ width: "100%", marginTop: 16, position: "relative" }}>
       <input
         type="text"
         value={input} // ✅ Show the raw input as typed
         onChange={handleChange}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
         placeholder="Guess the song..."
         disabled={disabled}
         style={{
@@ -63,7 +81,7 @@ export default function GuessBar({ songs, onGuess, disabled }) {
         }}
         autoComplete="off"
       />
-      {suggestions.length > 0 && (
+      {showSuggestions && suggestions.length > 0 && (
         <div
           style={{
             background: "#232526",
@@ -75,12 +93,14 @@ export default function GuessBar({ songs, onGuess, disabled }) {
             width: "calc(100% - 2px)",
             maxHeight: 180,
             overflowY: "auto",
+            WebkitOverflowScrolling: "touch", // <-- for iOS momentum scroll
+            touchAction: "pan-y",             // <-- for better touch scroll
           }}
         >
           {suggestions.map((title) => (
             <div
               key={title}
-              onClick={() => handleSelect(title)}
+              onMouseDown={() => handleSelect(title)}
               style={{
                 padding: "8px 12px",
                 cursor: "pointer",
