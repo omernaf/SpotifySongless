@@ -6,6 +6,7 @@ export default function GuessBar({ songs, onGuess, disabled }) {
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const dropdownRef = useRef(null);
+  const lastY = useRef(null);
 
   const handleChange = (e) => {
     const value = e.target.value;
@@ -66,19 +67,29 @@ export default function GuessBar({ songs, onGuess, disabled }) {
     setShowSuggestions(false);
   };
 
-  // Prevent page scroll when scrolling inside the dropdown
-  const handleTouchMove = (e) => {
-    const el = dropdownRef.current;
-    if (!el) return;
-    const { scrollTop, scrollHeight, clientHeight } = el;
-    if (
-      (scrollTop === 0 && e.touches[0].clientY > 0) ||
-      (scrollTop + clientHeight === scrollHeight && e.touches[0].clientY < 0)
-    ) {
-      e.preventDefault();
-    }
-    e.stopPropagation();
+  // Trap scroll inside dropdown on mobile
+  const handleTouchStart = (e) => {
+    lastY.current = e.touches[0].clientY;
   };
+
+const handleTouchMove = (e) => {
+  const el = dropdownRef.current;
+  if (!el) return;
+  const { scrollTop, scrollHeight, clientHeight } = el;
+  const currentY = e.touches[0].clientY;
+  const isScrollingUp = currentY > lastY.current;
+  const isScrollingDown = currentY < lastY.current;
+
+  const atTop = scrollTop === 0;
+  const atBottom = scrollTop + clientHeight >= scrollHeight;
+
+  if ((atTop && isScrollingUp) || (atBottom && isScrollingDown)) {
+    // Only prevent scrolling if at edge
+    e.preventDefault();
+  }
+
+  lastY.current = currentY;
+};
 
   return (
     <form onSubmit={handleSubmit} style={{ width: "100%", marginTop: 16, position: "relative" }}>
@@ -113,11 +124,10 @@ export default function GuessBar({ songs, onGuess, disabled }) {
             position: "absolute",
             zIndex: 10,
             width: "calc(100% - 2px)",
-            maxHeight: 180,
-            overflowY: "auto",
             WebkitOverflowScrolling: "touch",
             touchAction: "pan-y",
           }}
+          onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
         >
           {suggestions.map((song, idx) => (
