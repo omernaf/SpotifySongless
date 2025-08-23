@@ -6,7 +6,10 @@ import LoadingScreen from "./LoadingScreen";
 import GameScreen from "./GameScreen";
 import Cookies from "js-cookie";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "https://spotifysongless-backend.up.railway.app";
+// const BACKEND_URL = "http://10.0.2.15:8000";
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:8000";
+console.log(`[SpotifySongless] Frontend configured to use backend at: ${BACKEND_URL}`);
+
 const UNLOCK_STEPS = [0.5, 1, 2, 4, 8, 15, 30, Infinity];
 
 // Helper to extract filename from mp3Url
@@ -21,9 +24,11 @@ async function deleteCurrentSong(mp3Url) {
   const filename = getFilenameFromUrl(mp3Url);
   if (!filename) return;
   try {
+    console.log(`[SpotifySongless] Requesting backend to delete song: ${filename}`);
     await axios.post(`${BACKEND_URL}/delete_mp3`, { filename });
+    console.log(`[SpotifySongless] Successfully requested deletion for: ${filename}`);
   } catch (e) {
-    // Optionally handle error
+    console.error(`[SpotifySongless] Error deleting song: ${filename}`, e);
   }
 }
 
@@ -38,13 +43,17 @@ function savePlaylistToCookie(playlistMeta) {
   history.unshift(playlistMeta);
   if (history.length > 3) history = history.slice(0, 3);
   Cookies.set("playlistHistory", JSON.stringify(history), { expires: 365 });
+  console.log(`[SpotifySongless] Saved playlist to cookie:`, playlistMeta);
 }
 
 // Read playlist history from cookie
 function getPlaylistHistoryFromCookie() {
   try {
-    return JSON.parse(Cookies.get("playlistHistory") || "[]");
+    const history = JSON.parse(Cookies.get("playlistHistory") || "[]");
+    console.log(`[SpotifySongless] Loaded playlist history from cookie:`, history);
+    return history;
   } catch {
+    console.warn(`[SpotifySongless] Failed to parse playlist history from cookie`);
     return [];
   }
 }
@@ -91,14 +100,17 @@ function App() {
     setStatus("Downloading...");
     setLoading(true);
     try {
+      console.log(`[SpotifySongless] Requesting MP3 download for: ${randomSong.query}`);
       const res = await axios.post(`${BACKEND_URL}/download_mp3`, { query: randomSong.query });
       setMp3Url(BACKEND_URL + res.data.mp3_url);
+      console.log(`[SpotifySongless] MP3 download successful. URL: ${BACKEND_URL + res.data.mp3_url}`);
       setStatus("");
-      setPage("game"); // <-- Move this here, after download
+      setPage("game");
     } catch (e) {
+      console.error(`[SpotifySongless] Failed to download MP3 for: ${randomSong.query}`, e);
       setStatus("Failed to download MP3. Try again.");
       setMp3Url("");
-      setPage("landing"); // Optional: go back to landing on error
+      setPage("landing");
     }
     setLoading(false);
   };
@@ -114,14 +126,14 @@ function App() {
     setCurrentTime(0);
     setIsPlaying(false);
     try {
-      console.log("API URL:", process.env);
+      console.log(`[SpotifySongless] Requesting playlist extraction for URL: ${playlistUrl}`);
       const res = await axios.post(`${BACKEND_URL}/extract_songs`, { url: playlistUrl });
       setSongs(res.data.songs);
+      console.log(`[SpotifySongless] Received ${res.data.songs.length} songs from backend`);
       if (res.data.songs.length === 0) {
         setStatus("No songs found in this playlist.");
         setPage("landing");
       } else {
-        // Save playlist metadata to cookie
         const playlistMeta = {
           url: playlistUrl,
           name: res.data.name || "Unknown Playlist",
@@ -143,6 +155,7 @@ function App() {
       } else {
         errorMsg += "Unknown error.";
       }
+      console.error(`[SpotifySongless] Playlist extraction failed: ${errorMsg}`, e);
       setStatus(errorMsg);
       setPage("landing");
     }
