@@ -31,11 +31,11 @@ def open_top_youtube_result(query, status_label=None, progress_bar=None):
         if d.get('status') == 'postprocessing' and d.get('postprocessor') == 'FFmpegExtractAudio':
             mp3_path_holder['path'] = d['filename']
 
-    cookie_path = os.path.join(os.path.dirname(__file__), "cookies.txt")
-    if os.path.exists(cookie_path):
-        print(f"[yt-dlp] Successfully found and will use cookies file at: {cookie_path}")
-    else:
-        print(f"[yt-dlp] WARNING: cookies.txt not found at: {cookie_path}")
+    # cookie_path = os.path.join(os.path.dirname(__file__), "cookies.txt")
+    # if os.path.exists(cookie_path):
+    #     print(f"[yt-dlp] Successfully found and will use cookies file at: {cookie_path}")
+    # else:
+    #     print(f"[yt-dlp] WARNING: cookies.txt not found at: {cookie_path}")
 
     ydl_opts = {
         'format': 'bestaudio/best',
@@ -48,7 +48,7 @@ def open_top_youtube_result(query, status_label=None, progress_bar=None):
         'quiet': True,
         'noplaylist': True,
         'progress_hooks': [progress_hook],
-        'cookiefile': cookie_path,
+        # 'cookiefile': cookie_path,
     }
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
