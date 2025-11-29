@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+spotipy
+pydub
+python-multipart
+requests
+spotdl
+starlette
