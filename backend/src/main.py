@@ -144,6 +144,10 @@ def download_mp3(req: DownloadRequest):
             spotdl_ver = subprocess.run([sys.executable, "-m", "spotdl", "--version"], capture_output=True, text=True)
             diagnostics += f"\nSpotdl Version Check: ReturnCode={spotdl_ver.returncode}, Stdout={spotdl_ver.stdout}, Stderr={spotdl_ver.stderr}"
             
+            # Check yt-dlp version
+            ytdlp_ver = subprocess.run([sys.executable, "-m", "yt_dlp", "--version"], capture_output=True, text=True)
+            diagnostics += f"\nyt-dlp Version Check: ReturnCode={ytdlp_ver.returncode}, Stdout={ytdlp_ver.stdout}, Stderr={ytdlp_ver.stderr}"
+
             # Check ffmpeg version using the discovered path
             if FFMPEG_PATH and os.path.exists(FFMPEG_PATH):
                 ffmpeg_ver = subprocess.run([FFMPEG_PATH, "-version"], capture_output=True, text=True)

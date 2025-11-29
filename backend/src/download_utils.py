@@ -28,7 +28,9 @@ def download_song(query, output_dir=None, ffmpeg_path=None):
         "download", 
         query, 
         "--output", 
-        output_dir
+        output_dir,
+        "--log-level",
+        "DEBUG"
     ]
 
     if ffmpeg_path:
