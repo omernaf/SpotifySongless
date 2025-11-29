@@ -4,12 +4,14 @@ import logging
 
 logger = logging.getLogger("spotify_songless")
 
-def download_song(query):
+def download_song(query, output_dir=None):
     """
     Downloads a song using spotdl based on the query.
     Returns the absolute path to the downloaded MP3 file.
     """
-    output_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../music_files"))
+    if output_dir is None:
+        output_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../music_files"))
+    
     os.makedirs(output_dir, exist_ok=True)
 
     logger.info(f"Attempting to download query: {query} using spotdl")

@@ -17,6 +17,10 @@ logging.basicConfig(
 )
 logger = logging.getLogger("spotify_songless")
 
+# Determine if running on Vercel (or use explicit env var)
+# Vercel sets VERCEL=1
+is_vercel = os.environ.get("VERCEL") == "1"
+
 app = FastAPI()
 
 # Middleware to strip /api prefix for Vercel
@@ -37,7 +41,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-MUSIC_DIR = os.environ.get("MUSIC_DIR") or os.path.abspath(os.path.join(os.path.dirname(__file__), "../music_files"))
+MUSIC_DIR = "/tmp" if is_vercel else (os.environ.get("MUSIC_DIR") or os.path.abspath(os.path.join(os.path.dirname(__file__), "../music_files")))
+
+# Ensure MUSIC_DIR exists
+if not os.path.exists(MUSIC_DIR):
+    os.makedirs(MUSIC_DIR, exist_ok=True)
 
 class PlaylistRequest(BaseModel):
     url: str
@@ -95,7 +103,7 @@ def extract_songs(req: PlaylistRequest):
 def download_mp3(req: DownloadRequest):
     logger.info(f"Received MP3 download request for query: {req.query}")
     try:
-        mp3_path = download_song(req.query)
+        mp3_path = download_song(req.query, output_dir=MUSIC_DIR)
         logger.info(f"download_song returned path: {mp3_path}")
         if not mp3_path or not os.path.exists(mp3_path):
             logger.error(f"Download failed. mp3_path: {mp3_path}")
