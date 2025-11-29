@@ -30,7 +30,11 @@ def download_song(query, output_dir=None, ffmpeg_path=None):
         "--output", 
         output_dir,
         "--log-level",
-        "DEBUG"
+        "DEBUG",
+        "--audio-providers",
+        "soundcloud",
+        "piped",
+        "youtube-music"
     ]
 
     if ffmpeg_path:
