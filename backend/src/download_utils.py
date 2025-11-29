@@ -112,6 +112,8 @@ def download_with_cobalt(query, output_dir):
 
         logger.info("Resolving YouTube ID...")
         proc = subprocess.run(cmd, capture_output=True, text=True)
+        logger.debug(f"yt-dlp search stdout: {proc.stdout}")
+        logger.debug(f"yt-dlp search stderr: {proc.stderr}")
         
         if proc.returncode != 0:
             logger.error(f"Failed to find video ID: {proc.stderr}")
@@ -163,13 +165,21 @@ def download_with_cobalt(query, output_dir):
         filename = f"{safe_filename}.mp3"
         filepath = os.path.join(output_dir, filename)
         
+        logger.debug(f"Output directory content before download: {os.listdir(output_dir)}")
+        
         with requests.get(download_url, stream=True) as r:
             r.raise_for_status()
             with open(filepath, 'wb') as f:
                 for chunk in r.iter_content(chunk_size=8192): 
                     f.write(chunk)
-                    
-        logger.info(f"Cobalt download successful: {filepath}")
+        
+        if os.path.exists(filepath):
+            file_size = os.path.getsize(filepath)
+            logger.info(f"Cobalt download successful: {filepath} (Size: {file_size} bytes)")
+            logger.debug(f"Output directory content after download: {os.listdir(output_dir)}")
+        else:
+            logger.error(f"File not found after download: {filepath}")
+            
         return filepath
 
     except Exception as e:
