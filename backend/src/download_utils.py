@@ -45,6 +45,13 @@ def download_song(query, output_dir=None, ffmpeg_path=None):
             text=True
         )
         logger.info(f"spotdl output: {result.stdout}")
+        
+        # Check for known error strings in stdout even if exit code was 0
+        if "AudioProviderError" in result.stdout or "DownloadError" in result.stdout:
+            error_msg = f"spotdl reported an error despite success code.\nSTDOUT: {result.stdout}\nSTDERR: {result.stderr}"
+            logger.error(error_msg)
+            raise Exception(error_msg)
+            
     except subprocess.CalledProcessError as e:
         error_msg = f"spotdl failed with code {e.returncode}.\nSTDOUT: {e.stdout}\nSTDERR: {e.stderr}"
         logger.error(error_msg)
