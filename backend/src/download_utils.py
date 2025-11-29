@@ -181,7 +181,10 @@ def download_with_cobalt(query, output_dir):
         import requests
 
         for instance_base in cobalt_instances:
-            api_url = f"{instance_base}/api/json"
+            # v10+ API uses POST / (root) instead of /api/json
+            api_url = instance_base
+            if not api_url.endswith("/"):
+                api_url += "/"
             logger.info(f"Requesting download link from Cobalt instance: {instance_base}...")
             try:
                 response = requests.post(api_url, json=payload, headers=headers, timeout=10)
