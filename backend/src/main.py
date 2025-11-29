@@ -8,7 +8,7 @@ import spotipy
 from spotipy.exceptions import SpotifyException
 
 from spotify_utils import sp, extract_playlist_id, is_hebrew, reverse_hebrew_words
-from youtube_utils import open_top_youtube_result
+from download_utils import download_song
 
 # --- Logger setup ---
 logging.basicConfig(
@@ -86,8 +86,8 @@ def extract_songs(req: PlaylistRequest):
 def download_mp3(req: DownloadRequest):
     logger.info(f"Received MP3 download request for query: {req.query}")
     try:
-        mp3_path = open_top_youtube_result(req.query)
-        logger.info(f"open_top_youtube_result returned path: {mp3_path}")
+        mp3_path = download_song(req.query)
+        logger.info(f"download_song returned path: {mp3_path}")
         if not mp3_path or not os.path.exists(mp3_path):
             logger.error(f"Download failed. mp3_path: {mp3_path}")
             raise HTTPException(status_code=500, detail="Download failed")
@@ -96,7 +96,7 @@ def download_mp3(req: DownloadRequest):
         return {"mp3_url": f"/music/{filename}"}
     except Exception as e:
         logger.exception("Exception in download_mp3")
-        raise HTTPException(status_code=500, detail=f"Download failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Download failed: {str(e)}")
 
 @app.get("/music/{filename}")
 def get_mp3(filename: str):
