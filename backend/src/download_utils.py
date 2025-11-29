@@ -155,9 +155,17 @@ def download_with_cobalt(query, output_dir):
         logger.info(f"Resolved URL: {youtube_url}")
 
         # 2. Call Cobalt API
-        # Using a public instance. In production, you might want to host your own or rotate instances.
-        # api.cobalt.tools is the main one.
-        cobalt_api = "https://api.cobalt.tools/api/json"
+        # api.cobalt.tools is shut down. We use a list of community instances.
+        # Source: https://instances.cobalt.best/
+        cobalt_instances = [
+            "https://cobalt-api.meowing.de",
+            "https://cobalt-backend.canine.tools",
+            "https://kityune.imput.net",
+            "https://capi.3kh0.net",
+            "https://nachos.imput.net",
+            "https://sunny.imput.net"
+        ]
+        
         headers = {
             "Accept": "application/json",
             "Content-Type": "application/json",
@@ -169,20 +177,30 @@ def download_with_cobalt(query, output_dir):
             "isAudioOnly": True
         }
         
-        logger.info("Requesting download link from Cobalt...")
+        download_url = None
         import requests
-        response = requests.post(cobalt_api, json=payload, headers=headers)
-        
-        if response.status_code != 200:
-            logger.error(f"Cobalt API error: {response.status_code} - {response.text}")
-            raise Exception(f"Cobalt API returned {response.status_code}")
-            
-        data = response.json()
-        download_url = data.get("url")
+
+        for instance_base in cobalt_instances:
+            api_url = f"{instance_base}/api/json"
+            logger.info(f"Requesting download link from Cobalt instance: {instance_base}...")
+            try:
+                response = requests.post(api_url, json=payload, headers=headers, timeout=10)
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    download_url = data.get("url")
+                    if download_url:
+                        logger.info(f"Successfully got download link from {instance_base}")
+                        break
+                    else:
+                        logger.warning(f"Instance {instance_base} returned 200 but no URL: {data}")
+                else:
+                    logger.warning(f"Instance {instance_base} failed with status {response.status_code}: {response.text}")
+            except Exception as e:
+                logger.warning(f"Failed to connect to instance {instance_base}: {e}")
         
         if not download_url:
-            logger.error(f"Cobalt response missing URL: {data}")
-            raise Exception("Cobalt did not return a download URL")
+            raise Exception("All Cobalt instances failed to return a download URL")
             
         logger.info("Got download link from Cobalt. Downloading file...")
         
