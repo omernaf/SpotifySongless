@@ -7,8 +7,8 @@ from pydantic import BaseModel
 import spotipy
 from spotipy.exceptions import SpotifyException
 
-from spotify_utils import sp, extract_playlist_id, is_hebrew, reverse_hebrew_words
-from download_utils import download_song
+from backend.src.spotify_utils import sp, extract_playlist_id, is_hebrew, reverse_hebrew_words
+from backend.src.download_utils import download_song
 
 # --- Logger setup ---
 logging.basicConfig(
