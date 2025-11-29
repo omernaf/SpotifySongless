@@ -99,12 +99,16 @@ def download_with_cobalt(query, output_dir):
         # 1. Get YouTube URL
         # We use yt-dlp to search because it's already installed and good at searching.
         # We only ask for the ID to minimize traffic/blocking risk.
+        # Path to cookies.txt
+        cookies_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "cookies.txt"))
+
         cmd = [
             sys.executable, "-m", "yt_dlp", 
             f"ytsearch1:{query}", 
             "--get-id", 
             "--no-warnings",
-            "--no-playlist"
+            "--no-playlist",
+            "--cookie-file", cookies_path
         ]
         
         # Add User-Agent to search request too, just in case
@@ -115,13 +119,27 @@ def download_with_cobalt(query, output_dir):
         logger.debug(f"yt-dlp search stdout: {proc.stdout}")
         logger.debug(f"yt-dlp search stderr: {proc.stderr}")
         
-        if proc.returncode != 0:
+        video_id = None
+        
+        if proc.returncode == 0:
+            video_id = proc.stdout.strip()
+        else:
+            logger.warning(f"yt-dlp search failed with code {proc.returncode}. Attempting to recover ID from output...")
+            # Try to extract ID from stderr: [youtube] <ID>: Sign in to confirm...
+            import re
+            match = re.search(r'\[youtube\] ([a-zA-Z0-9_-]{11}):', proc.stderr)
+            if match:
+                video_id = match.group(1)
+                logger.info(f"Recovered Video ID from stderr: {video_id}")
+            else:
+                # Also check stdout just in case
+                if proc.stdout.strip():
+                     video_id = proc.stdout.strip().split('\n')[0]
+                     logger.info(f"Recovered Video ID from stdout: {video_id}")
+
+        if not video_id:
             logger.error(f"Failed to find video ID: {proc.stderr}")
             raise Exception("Could not find video ID")
-            
-        video_id = proc.stdout.strip()
-        if not video_id:
-            raise Exception("yt-dlp returned empty video ID")
             
         youtube_url = f"https://www.youtube.com/watch?v={video_id}"
         logger.info(f"Resolved URL: {youtube_url}")
