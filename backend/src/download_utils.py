@@ -36,7 +36,7 @@ def download_song(query, output_dir=None, ffmpeg_path=None):
         "DEBUG",
         "--cookie-file",
         cookies_path,
-        "--audio-providers",
+        "--audio",
         "soundcloud",
         "piped",
         "youtube-music"
