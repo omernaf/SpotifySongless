@@ -144,9 +144,12 @@ def download_mp3(req: DownloadRequest):
             spotdl_ver = subprocess.run([sys.executable, "-m", "spotdl", "--version"], capture_output=True, text=True)
             diagnostics += f"\nSpotdl Version Check: ReturnCode={spotdl_ver.returncode}, Stdout={spotdl_ver.stdout}, Stderr={spotdl_ver.stderr}"
             
-            # Check ffmpeg version
-            ffmpeg_ver = subprocess.run(["ffmpeg", "-version"], capture_output=True, text=True)
-            diagnostics += f"\nFFmpeg Version Check: ReturnCode={ffmpeg_ver.returncode}, Stdout={ffmpeg_ver.stdout}, Stderr={ffmpeg_ver.stderr}"
+            # Check ffmpeg version using the discovered path
+            if FFMPEG_PATH and os.path.exists(FFMPEG_PATH):
+                ffmpeg_ver = subprocess.run([FFMPEG_PATH, "-version"], capture_output=True, text=True)
+                diagnostics += f"\nFFmpeg Version Check: ReturnCode={ffmpeg_ver.returncode}, Stdout={ffmpeg_ver.stdout[:100]}..., Stderr={ffmpeg_ver.stderr[:100]}..."
+            else:
+                diagnostics += f"\nFFmpeg Path Check: FFMPEG_PATH={FFMPEG_PATH}, Exists={os.path.exists(FFMPEG_PATH) if FFMPEG_PATH else 'N/A'}"
             
         except Exception as diag_e:
             diagnostics += f"\nDiagnostics failed: {str(diag_e)}"
