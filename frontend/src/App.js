@@ -38,7 +38,7 @@ function savePlaylistToCookie(playlistMeta) {
   let history = [];
   try {
     history = JSON.parse(Cookies.get("playlistHistory") || "[]");
-  } catch {}
+  } catch { }
   history = history.filter(item => item.url !== playlistMeta.url);
   history.unshift(playlistMeta);
   if (history.length > 3) history = history.slice(0, 3);
@@ -108,6 +108,9 @@ function App() {
       setPage("game");
     } catch (e) {
       console.error(`[SpotifySongless] Failed to download MP3 for: ${randomSong.query}`, e);
+      if (e.response && e.response.data) {
+        console.error("[SpotifySongless] Backend Error Details:", e.response.data);
+      }
       setStatus("Failed to download MP3. Try again.");
       setMp3Url("");
       setPage("landing");

@@ -47,8 +47,9 @@ def download_song(query, output_dir=None):
         )
         logger.info(f"spotdl output: {result.stdout}")
     except subprocess.CalledProcessError as e:
-        logger.error(f"spotdl failed: {e.stderr}")
-        return None
+        error_msg = f"spotdl failed with code {e.returncode}. Stderr: {e.stderr}"
+        logger.error(error_msg)
+        raise Exception(error_msg)
 
     # Find the most recently created mp3 file in the output directory
     # This is a heuristic, but spotdl doesn't easily return the filename in a machine-readable way via CLI
