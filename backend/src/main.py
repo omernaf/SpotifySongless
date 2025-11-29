@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import spotipy
 from spotipy.exceptions import SpotifyException
+import imageio_ffmpeg
 
 from backend.src.spotify_utils import sp, extract_playlist_id, is_hebrew, reverse_hebrew_words
 from backend.src.download_utils import download_song
@@ -20,6 +21,13 @@ logger = logging.getLogger("spotify_songless")
 # Determine if running on Vercel (or use explicit env var)
 # Vercel sets VERCEL=1
 is_vercel = os.environ.get("VERCEL") == "1"
+
+# --- FFmpeg Setup for Vercel ---
+# spotdl requires ffmpeg. On Vercel, we use imageio-ffmpeg to provide the binary.
+ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
+ffmpeg_dir = os.path.dirname(ffmpeg_path)
+os.environ["PATH"] += os.pathsep + ffmpeg_dir
+logger.info(f"Added ffmpeg to PATH: {ffmpeg_dir}")
 
 app = FastAPI()
 
@@ -46,6 +54,10 @@ MUSIC_DIR = "/tmp" if is_vercel else (os.environ.get("MUSIC_DIR") or os.path.abs
 # Ensure MUSIC_DIR exists
 if not os.path.exists(MUSIC_DIR):
     os.makedirs(MUSIC_DIR, exist_ok=True)
+
+# Configure spotdl cache to use /tmp on Vercel
+if is_vercel:
+    os.environ["SPOTDL_CACHE_PATH"] = os.path.join(MUSIC_DIR, ".spotdl_cache")
 
 class PlaylistRequest(BaseModel):
     url: str
