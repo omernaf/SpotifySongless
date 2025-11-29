@@ -21,6 +21,9 @@ def download_song(query, output_dir=None, ffmpeg_path=None):
     # spotdl download [query] --output [output_dir]
     # We use sys.executable -m spotdl to ensure we use the installed module in the current environment
     
+    # Path to cookies.txt
+    cookies_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "cookies.txt"))
+
     command = [
         sys.executable,
         "-m",
@@ -31,6 +34,8 @@ def download_song(query, output_dir=None, ffmpeg_path=None):
         output_dir,
         "--log-level",
         "DEBUG",
+        "--cookie-file",
+        cookies_path,
         "--audio-providers",
         "soundcloud",
         "piped",
