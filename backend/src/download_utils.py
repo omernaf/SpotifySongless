@@ -60,15 +60,14 @@ def download_song(query, output_dir=None, ffmpeg_path=None):
         logger.info(f"spotdl output: {result.stdout}")
         
         # Check for known error strings in stdout even if exit code was 0
+        # Check for known error strings in stdout even if exit code was 0
         if "AudioProviderError" in result.stdout or "DownloadError" in result.stdout:
-            error_msg = f"spotdl reported an error despite success code.\nSTDOUT: {result.stdout}\nSTDERR: {result.stderr}"
-            logger.error(error_msg)
-            raise Exception(error_msg)
+            logger.warning(f"spotdl reported an error. Triggering Cobalt fallback. Output: {result.stdout}")
+            return download_with_cobalt(query, output_dir)
             
     except subprocess.CalledProcessError as e:
-        error_msg = f"spotdl failed with code {e.returncode}.\nSTDOUT: {e.stdout}\nSTDERR: {e.stderr}"
-        logger.error(error_msg)
-        raise Exception(error_msg)
+        logger.warning(f"spotdl failed with code {e.returncode}. Triggering Cobalt fallback.")
+        return download_with_cobalt(query, output_dir)
 
     # Find the most recently created mp3 file in the output directory
     # This is a heuristic, but spotdl doesn't easily return the filename in a machine-readable way via CLI
