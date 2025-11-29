@@ -102,23 +102,33 @@ def download_with_cobalt(query, output_dir):
         # Path to cookies.txt
         cookies_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "cookies.txt"))
 
-        cmd = [
+        base_cmd = [
             sys.executable, "-m", "yt_dlp", 
             f"ytsearch1:{query}", 
             "--get-id", 
             "--no-warnings",
-            "--no-playlist",
-            "--cookie-file", cookies_path
+            "--no-playlist"
         ]
         
-        # Add User-Agent to search request too, just in case
-        cmd.extend(["--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"])
+        # Add User-Agent
+        base_cmd.extend(["--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"])
 
-        logger.info("Resolving YouTube ID...")
+        # Attempt 1: With cookies
+        cmd = base_cmd + ["--cookies", cookies_path]
+        
+        logger.info("Resolving YouTube ID (Attempt 1 with cookies)...")
         proc = subprocess.run(cmd, capture_output=True, text=True)
         logger.debug(f"yt-dlp search stdout: {proc.stdout}")
         logger.debug(f"yt-dlp search stderr: {proc.stderr}")
-        
+
+        # Retry without cookies if usage error (code 2)
+        if proc.returncode == 2:
+            logger.warning("yt-dlp rejected cookies argument. Retrying without cookies...")
+            cmd = base_cmd
+            proc = subprocess.run(cmd, capture_output=True, text=True)
+            logger.debug(f"yt-dlp retry stdout: {proc.stdout}")
+            logger.debug(f"yt-dlp retry stderr: {proc.stderr}")
+
         video_id = None
         
         if proc.returncode == 0:
