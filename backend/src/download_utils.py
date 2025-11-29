@@ -38,8 +38,8 @@ def download_song(query, output_dir=None, ffmpeg_path=None):
         cookies_path,
         "--audio",
         "soundcloud",
-        "piped",
-        "youtube-music"
+        "youtube-music",
+        "youtube"
     ]
 
     if ffmpeg_path:
