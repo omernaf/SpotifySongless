@@ -1,6 +1,7 @@
 import os
 import subprocess
 import logging
+import sys
 
 logger = logging.getLogger("spotify_songless")
 
@@ -22,7 +23,13 @@ def download_song(query, output_dir=None):
     # but spotdl's default naming is usually fine. 
     # We'll use a specific format to avoid ambiguity if possible, but simple directory is safer for now.
     
+    # Construct the command
+    # spotdl download [query] --output [output_dir]
+    # We use sys.executable -m spotdl to ensure we use the installed module in the current environment
+    
     command = [
+        sys.executable,
+        "-m",
         "spotdl", 
         "download", 
         query, 

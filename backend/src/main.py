@@ -24,10 +24,13 @@ is_vercel = os.environ.get("VERCEL") == "1"
 
 # --- FFmpeg Setup for Vercel ---
 # spotdl requires ffmpeg. On Vercel, we use imageio-ffmpeg to provide the binary.
-ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
-ffmpeg_dir = os.path.dirname(ffmpeg_path)
-os.environ["PATH"] += os.pathsep + ffmpeg_dir
-logger.info(f"Added ffmpeg to PATH: {ffmpeg_dir}")
+try:
+    ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
+    ffmpeg_dir = os.path.dirname(ffmpeg_path)
+    os.environ["PATH"] += os.pathsep + ffmpeg_dir
+    logger.info(f"Added ffmpeg to PATH: {ffmpeg_dir}")
+except Exception as e:
+    logger.error(f"Failed to setup ffmpeg: {e}")
 
 app = FastAPI()
 
@@ -58,6 +61,8 @@ if not os.path.exists(MUSIC_DIR):
 # Configure spotdl cache to use /tmp on Vercel
 if is_vercel:
     os.environ["SPOTDL_CACHE_PATH"] = os.path.join(MUSIC_DIR, ".spotdl_cache")
+    os.environ["XDG_CACHE_HOME"] = os.path.join(MUSIC_DIR, ".cache")
+    os.environ["XDG_CONFIG_HOME"] = os.path.join(MUSIC_DIR, ".config")
 
 class PlaylistRequest(BaseModel):
     url: str
