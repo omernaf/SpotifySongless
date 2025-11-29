@@ -17,12 +17,16 @@ logging.basicConfig(
 )
 logger = logging.getLogger("spotify_songless")
 
-# Determine if running on Vercel (or use explicit env var)
-# Vercel sets VERCEL=1
-is_vercel = os.environ.get("VERCEL") == "1"
-root_path = "/api" if is_vercel else ""
+app = FastAPI()
 
-app = FastAPI(root_path=root_path)
+# Middleware to strip /api prefix for Vercel
+@app.middleware("http")
+async def strip_api_prefix(request: Request, call_next):
+    if request.url.path.startswith("/api"):
+        # Modify the scope directly to strip /api
+        request.scope["path"] = request.url.path[4:]
+    response = await call_next(request)
+    return response
 
 # Allow CORS for local React dev
 app.add_middleware(
