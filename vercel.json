@@ -4,5 +4,8 @@
             "source": "/api/(.*)",
             "destination": "/api/index.py"
         }
-    ]
+    ],
+    "buildCommand": "cd frontend && npm install && npm run build",
+    "outputDirectory": "frontend/build",
+    "framework": "create-react-app"
 }
