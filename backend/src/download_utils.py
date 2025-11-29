@@ -5,7 +5,7 @@ import sys
 
 logger = logging.getLogger("spotify_songless")
 
-def download_song(query, output_dir=None):
+def download_song(query, output_dir=None, ffmpeg_path=None):
     """
     Downloads a song using spotdl based on the query.
     Returns the absolute path to the downloaded MP3 file.
@@ -16,12 +16,6 @@ def download_song(query, output_dir=None):
     os.makedirs(output_dir, exist_ok=True)
 
     logger.info(f"Attempting to download query: {query} using spotdl")
-    
-    # Construct the command
-    # spotdl download [query] --output [output_dir]
-    # We use --output to specify the directory and a format that ensures we can find it, 
-    # but spotdl's default naming is usually fine. 
-    # We'll use a specific format to avoid ambiguity if possible, but simple directory is safer for now.
     
     # Construct the command
     # spotdl download [query] --output [output_dir]
@@ -37,6 +31,11 @@ def download_song(query, output_dir=None):
         output_dir
     ]
 
+    if ffmpeg_path:
+        command.extend(["--ffmpeg", ffmpeg_path])
+
+    logger.info(f"Running command: {' '.join(command)}")
+
     try:
         # Run spotdl
         result = subprocess.run(
@@ -47,7 +46,7 @@ def download_song(query, output_dir=None):
         )
         logger.info(f"spotdl output: {result.stdout}")
     except subprocess.CalledProcessError as e:
-        error_msg = f"spotdl failed with code {e.returncode}. Stderr: {e.stderr}"
+        error_msg = f"spotdl failed with code {e.returncode}.\nSTDOUT: {e.stdout}\nSTDERR: {e.stderr}"
         logger.error(error_msg)
         raise Exception(error_msg)
 

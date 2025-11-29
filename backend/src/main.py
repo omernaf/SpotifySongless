@@ -24,9 +24,10 @@ is_vercel = os.environ.get("VERCEL") == "1"
 
 # --- FFmpeg Setup for Vercel ---
 # spotdl requires ffmpeg. On Vercel, we use imageio-ffmpeg to provide the binary.
+FFMPEG_PATH = None
 try:
-    ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
-    ffmpeg_dir = os.path.dirname(ffmpeg_path)
+    FFMPEG_PATH = imageio_ffmpeg.get_ffmpeg_exe()
+    ffmpeg_dir = os.path.dirname(FFMPEG_PATH)
     os.environ["PATH"] += os.pathsep + ffmpeg_dir
     logger.info(f"Added ffmpeg to PATH: {ffmpeg_dir}")
 except Exception as e:
@@ -122,7 +123,7 @@ def extract_songs(req: PlaylistRequest):
 def download_mp3(req: DownloadRequest):
     logger.info(f"Received MP3 download request for query: {req.query}")
     try:
-        mp3_path = download_song(req.query, output_dir=MUSIC_DIR)
+        mp3_path = download_song(req.query, output_dir=MUSIC_DIR, ffmpeg_path=FFMPEG_PATH)
         logger.info(f"download_song returned path: {mp3_path}")
         if not mp3_path or not os.path.exists(mp3_path):
             logger.error(f"Download failed. mp3_path: {mp3_path}")
@@ -132,7 +133,25 @@ def download_mp3(req: DownloadRequest):
         return {"mp3_url": f"/music/{filename}"}
     except Exception as e:
         logger.exception("Exception in download_mp3")
-        raise HTTPException(status_code=500, detail=f"Download failed: {str(e)}")
+        
+        # Diagnostic: Check if tools are runnable
+        diagnostics = ""
+        try:
+            import subprocess
+            import sys
+            
+            # Check spotdl version
+            spotdl_ver = subprocess.run([sys.executable, "-m", "spotdl", "--version"], capture_output=True, text=True)
+            diagnostics += f"\nSpotdl Version Check: ReturnCode={spotdl_ver.returncode}, Stdout={spotdl_ver.stdout}, Stderr={spotdl_ver.stderr}"
+            
+            # Check ffmpeg version
+            ffmpeg_ver = subprocess.run(["ffmpeg", "-version"], capture_output=True, text=True)
+            diagnostics += f"\nFFmpeg Version Check: ReturnCode={ffmpeg_ver.returncode}, Stdout={ffmpeg_ver.stdout}, Stderr={ffmpeg_ver.stderr}"
+            
+        except Exception as diag_e:
+            diagnostics += f"\nDiagnostics failed: {str(diag_e)}"
+
+        raise HTTPException(status_code=500, detail=f"Download failed: {str(e)}\nDiagnostics: {diagnostics}")
 
 @app.get("/music/{filename}")
 def get_mp3(filename: str):
