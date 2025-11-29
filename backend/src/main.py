@@ -63,6 +63,8 @@ if is_vercel:
     os.environ["SPOTDL_CACHE_PATH"] = os.path.join(MUSIC_DIR, ".spotdl_cache")
     os.environ["XDG_CACHE_HOME"] = os.path.join(MUSIC_DIR, ".cache")
     os.environ["XDG_CONFIG_HOME"] = os.path.join(MUSIC_DIR, ".config")
+    # CRITICAL: Override HOME to /tmp because many tools (like spotdl/ffmpeg) try to write to ~/.cache or ~/.config
+    os.environ["HOME"] = MUSIC_DIR
 
 class PlaylistRequest(BaseModel):
     url: str
