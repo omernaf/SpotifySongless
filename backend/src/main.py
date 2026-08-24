@@ -8,6 +8,7 @@ import requests
 
 from backend.src.deezer_utils import get_deezer_preview
 from backend.src.playlist_extractors import extract_universal_playlist
+from backend.src.featured_playlists import get_featured_playlists
 
 # --- Logger setup ---
 logging.basicConfig(
@@ -53,6 +54,13 @@ def extract_songs(req: PlaylistRequest):
     except Exception as e:
         logger.exception("Error extracting playlist")
         raise HTTPException(status_code=400, detail=str(e))
+
+@app.get("/featured_playlists")
+def featured_playlists():
+    """
+    Returns dynamically updated popular and Hebrew playlists with valid cover images.
+    """
+    return get_featured_playlists()
 
 @app.post("/get_preview")
 def get_preview(req: PreviewRequest):

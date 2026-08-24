@@ -9,8 +9,8 @@ import Cookies from "js-cookie";
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:8000";
 console.log(`[SpotifySongless] Frontend configured to use backend at: ${BACKEND_URL}`);
 
-// Previews from Deezer are 30s highlights, so 15s -> Infinity (full preview)
-const UNLOCK_STEPS = [0.5, 1, 2, 4, 8, 15, Infinity];
+// Previews from Deezer are 30s highlights: 0.1s -> 0.5s -> 1s -> 2s -> 4s -> 8s -> 15s -> Infinity (full preview)
+const UNLOCK_STEPS = [0.1, 0.5, 1, 2, 4, 8, 15, Infinity];
 
 const MAX_SAVED_PLAYLISTS = 5;
 
@@ -59,6 +59,14 @@ function App() {
   const [currentPlaylist, setCurrentPlaylist] = useState({ name: "", owner: "", thumbnail: "", songCount: 0 });
   const [albumCover, setAlbumCover] = useState("");
   const audioRef = useRef(null);
+  const stopTimeoutRef = useRef(null);
+
+  const clearStopTimer = () => {
+    if (stopTimeoutRef.current) {
+      clearTimeout(stopTimeoutRef.current);
+      stopTimeoutRef.current = null;
+    }
+  };
 
   useEffect(() => {
     setPlaylistHistory(getPlaylistHistoryFromCookie());
@@ -75,6 +83,7 @@ function App() {
 
   const playRandomSong = async (songsList) => {
     if (!songsList || songsList.length === 0) return;
+    clearStopTimer();
     setUnlockStep(0);
     setCurrentTime(0);
     setIsPlaying(false);
@@ -118,6 +127,7 @@ function App() {
   const handleStart = async (overrideUrl) => {
     const targetUrl = (typeof overrideUrl === "string" ? overrideUrl : playlistUrl).trim();
     if (!targetUrl) return;
+    clearStopTimer();
     setPlaylistUrl(targetUrl);
     setPage("loading");
     setStatus("");
@@ -186,6 +196,7 @@ function App() {
       unlockStep < UNLOCK_STEPS.length - 1 &&
       audioRef.current.currentTime >= maxTime
     ) {
+      clearStopTimer();
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
       setIsPlaying(false);
@@ -196,12 +207,14 @@ function App() {
   };
 
   const handleSkip = () => {
-    setGuessHistory(prev => [...prev, { type: "skip", value: `Skip to ${UNLOCK_STEPS[unlockStep + 1] === Infinity ? "All" : UNLOCK_STEPS[unlockStep + 1] + "s"}` }]);
-    setUnlockStep((prev) => Math.min(prev + 1, UNLOCK_STEPS.length - 1));
+    clearStopTimer();
+    const nextStep = Math.min(unlockStep + 1, UNLOCK_STEPS.length - 1);
+    setGuessHistory(prev => [...prev, { type: "skip", value: `Skip to ${UNLOCK_STEPS[nextStep] === Infinity ? "All" : UNLOCK_STEPS[nextStep] + "s"}` }]);
+    setUnlockStep(nextStep);
     setTimeout(() => {
       if (audioRef.current) {
-        audioRef.current.play();
-        setIsPlaying(true);
+        audioRef.current.currentTime = 0;
+        handlePlayPause(true);
       }
     }, 100);
   };
@@ -217,20 +230,27 @@ function App() {
   // Play/pause handler for Player
   const handlePlayPause = (play) => {
     if (!audioRef.current) return;
-    if (play === true) {
-      audioRef.current.play();
+    const willPlay = play === true || (play !== false && !isPlaying);
+    if (willPlay) {
+      clearStopTimer();
+      const maxTime = getCurrentMax();
+      if (unlockStep < UNLOCK_STEPS.length - 1 && maxTime < Infinity) {
+        const remainingMs = Math.max(10, (maxTime - audioRef.current.currentTime) * 1000);
+        stopTimeoutRef.current = setTimeout(() => {
+          if (audioRef.current && unlockStep < UNLOCK_STEPS.length - 1) {
+            audioRef.current.pause();
+            audioRef.current.currentTime = 0;
+            setIsPlaying(false);
+            setCurrentTime(0);
+          }
+        }, remainingMs);
+      }
+      audioRef.current.play().catch(() => {});
       setIsPlaying(true);
-    } else if (play === false) {
+    } else {
+      clearStopTimer();
       audioRef.current.pause();
       setIsPlaying(false);
-    } else {
-      if (isPlaying) {
-        audioRef.current.pause();
-        setIsPlaying(false);
-      } else {
-        audioRef.current.play();
-        setIsPlaying(true);
-      }
     }
   };
 
@@ -252,6 +272,7 @@ function App() {
   const handleGuess = (guess) => {
     if (!currentSong) return;
     if (guess.trim().toLowerCase() === currentSong.trim().toLowerCase()) {
+      clearStopTimer();
       setGuessFeedback("🎉 Correct!");
       setGuessedCorrectly(true);
       setUnlockStep(UNLOCK_STEPS.length - 1);
@@ -274,6 +295,7 @@ function App() {
   };
 
   const handleReturnToLanding = () => {
+    clearStopTimer();
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
