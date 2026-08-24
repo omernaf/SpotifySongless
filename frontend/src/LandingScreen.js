@@ -31,7 +31,7 @@ export default function LandingScreen({ playlistUrl, setPlaylistUrl, onStart, st
         </h2>
         <input
           type="text"
-          placeholder="Paste Spotify or Deezer playlist link..."
+          placeholder="Paste Spotify, Apple Music, YouTube, or Deezer playlist..."
           value={playlistUrl}
           onChange={e => setPlaylistUrl(e.target.value)}
           style={{

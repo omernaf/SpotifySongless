@@ -1,18 +1,22 @@
 # SpotifySongless
 
-SpotifySongless is a song guessing game web app. Paste any Spotify playlist URL, and the app will pick a random song and play incrementally increasing snippets (0.5s, 1s, 2s, 4s, 8s, 15s, full preview) for you to guess!
+SpotifySongless is a song guessing game web app. Paste any playlist URL from **Spotify**, **Apple Music**, **YouTube Music**, or **Deezer**, and the app will pick a random song and play incrementally increasing snippets (0.5s, 1s, 2s, 4s, 8s, 15s, full preview) for you to guess!
 
-It features instant streaming of 30-second official preview clips via the free Deezer API (no YouTube scraping, no local file storage, zero audio conversion overhead).
+It features instant streaming of 30-second official preview clips via the free Deezer API (no illegal YouTube downloads, no local file storage, zero audio conversion overhead).
 
 ---
 
 ## Features
 
-- **Spotify Playlist Extraction**: Paste any public Spotify playlist URL to load all songs (supports full pagination for large playlists).
-- **Instant Preview Streaming**: Uses the Deezer API to search and stream high-quality 30s highlight preview clips instantly.
-- **Smart Song Sanitization**: Automatic cleanup of remaster, live, deluxe, and featured artist tags for accurate track matching.
+- **Multi-Platform Playlist Support**:
+  - **Spotify**: Full playlist URLs, shortened links (`spotify.link`, `spoti.fi`), and `spotify:playlist:...` URIs.
+  - **Apple Music**: Public playlist links (`music.apple.com/.../playlist/...`).
+  - **YouTube / YouTube Music**: Playlist links (`music.youtube.com/playlist?list=...` or `youtube.com/playlist?list=...`).
+  - **Deezer**: Playlist URLs and IDs (`deezer.com/playlist/...`).
+- **Instant Preview Streaming**: Uses the free Deezer API to search and stream high-quality 30s highlight preview clips instantly with zero auth required.
+- **Smart Song Sanitization**: Automatic cleanup of remaster dates, live, deluxe, and featured artist tags for accurate track matching.
 - **Hebrew & RTL Support**: Full support for Hebrew titles with bidirectional rendering.
-- **Lightweight Architecture**: No YouTube downloads, no `yt-dlp`/`spotdl`, no `ffmpeg` required, zero disk footprint.
+- **Lightweight Architecture**: No YouTube scraping, no `yt-dlp`/`spotdl`, no `ffmpeg` required, zero disk footprint.
 
 ---
 
@@ -54,7 +58,7 @@ npm start
 
 ## API Endpoints
 
-- `POST /extract_songs`: Extracts all tracks from a Spotify playlist URL.
+- `POST /extract_songs`: Extracts all tracks from a Spotify, Apple Music, YouTube Music, or Deezer playlist URL.
 - `POST /get_preview`: Fetches Deezer preview MP3 URL for a given artist/title.
 - `GET /proxy_preview?url=...`: Optional proxy stream for preview audio.
 
