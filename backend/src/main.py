@@ -8,7 +8,13 @@ import spotipy
 from spotipy.exceptions import SpotifyException
 import requests
 
-from backend.src.spotify_utils import sp, extract_playlist_id, is_hebrew, reverse_hebrew_words
+from backend.src.spotify_utils import (
+    sp,
+    extract_playlist_id,
+    is_hebrew,
+    reverse_hebrew_words,
+    resolve_music_url
+)
 from backend.src.deezer_utils import (
     get_deezer_preview,
     extract_deezer_playlist_id,
@@ -52,9 +58,11 @@ class PreviewRequest(BaseModel):
 @app.post("/extract_songs")
 def extract_songs(req: PlaylistRequest):
     logger.info(f"Received playlist extraction request for URL: {req.url}")
+    target_url = resolve_music_url(req.url)
+    logger.info(f"Resolved playlist URL: {target_url}")
     
     # Check if URL is Deezer playlist or Spotify playlist
-    deezer_id = extract_deezer_playlist_id(req.url)
+    deezer_id = extract_deezer_playlist_id(target_url)
     if deezer_id:
         logger.info(f"Identified Deezer playlist ID: {deezer_id}")
         try:
@@ -92,9 +100,9 @@ def extract_songs(req: PlaylistRequest):
             raise HTTPException(status_code=400, detail=f"Failed to extract Deezer playlist: {str(e)}")
 
     # Fallback to Spotify playlist extraction
-    playlist_id = extract_playlist_id(req.url)
+    playlist_id = extract_playlist_id(target_url)
     if not playlist_id:
-        logger.warning(f"Could not extract playlist ID from URL: {req.url}")
+        logger.warning(f"Could not extract playlist ID from URL: {req.url} (resolved: {target_url})")
         raise HTTPException(status_code=400, detail="Invalid Spotify or Deezer playlist URL")
 
     logger.info(f"Extracted Spotify playlist ID: {playlist_id}")

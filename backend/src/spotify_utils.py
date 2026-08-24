@@ -1,6 +1,8 @@
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 import re
+import requests
+from urllib.parse import urlparse
 
 CLIENT_ID = 'c8a7cac32dfe409fbc685d036abc4c6a'
 CLIENT_SECRET = '8b7e92c4bc0e47f99b119fd20c36a869'
@@ -9,6 +11,61 @@ sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
     client_id=CLIENT_ID,
     client_secret=CLIENT_SECRET
 ))
+
+def resolve_music_url(url: str) -> str:
+    """
+    Expands shortened URLs (such as spotify.link, spotify.app.link, spoti.fi, deezer.page.link)
+    by following HTTP redirects or parsing canonical playlist meta tags.
+    """
+    if not url:
+        return ""
+    
+    url = url.strip()
+
+    # Handle spotify:playlist:URI format
+    if url.startswith("spotify:playlist:"):
+        playlist_id = url.split(":")[-1]
+        return f"https://open.spotify.com/playlist/{playlist_id}"
+
+    if not url.startswith("http://") and not url.startswith("https://"):
+        url = "https://" + url
+
+    parsed = urlparse(url)
+    hostname = parsed.netloc.lower()
+
+    # If it's already an open.spotify.com/playlist/ or deezer.com/playlist/ URL, return directly
+    if ("open.spotify.com" in hostname or "deezer.com" in hostname) and "/playlist/" in url:
+        return url
+
+    # Follow redirects for shortened domains
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
+
+    try:
+        resp = requests.get(url, headers=headers, allow_redirects=True, timeout=10)
+        final_url = resp.url
+
+        if "/playlist/" in final_url:
+            return final_url
+
+        # Check HTML for og:url or embedded playlist links if redirected to intermediary landing page
+        if resp.text:
+            og_match = re.search(r'<meta\s+property=["\']og:url["\']\s+content=["\']([^"\']+)["\']', resp.text, re.IGNORECASE)
+            if og_match and "/playlist/" in og_match.group(1):
+                return og_match.group(1)
+
+            spotify_match = re.search(r'https?://open\.spotify\.com/playlist/([a-zA-Z0-9]+)', resp.text)
+            if spotify_match:
+                return spotify_match.group(0)
+
+            deezer_match = re.search(r'https?://(?:www\.)?deezer\.com/(?:[a-z]{2}/)?playlist/(\d+)', resp.text)
+            if deezer_match:
+                return deezer_match.group(0)
+
+        return final_url
+    except Exception:
+        return url
 
 def extract_playlist_id(url):
     match = re.search(r'playlist/([a-zA-Z0-9]+)', url)
