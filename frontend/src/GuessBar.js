@@ -94,7 +94,7 @@ export default function GuessBar({ songs, onGuess, disabled }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{ width: "100%", marginTop: 16, position: "relative" }}>
+    <form onSubmit={handleSubmit} style={{ width: "100%", marginTop: 14, position: "relative" }}>
       <input
         type="text"
         value={input}
@@ -105,14 +105,15 @@ export default function GuessBar({ songs, onGuess, disabled }) {
         disabled={disabled}
         style={{
           width: "100%",
-          fontSize: 18,
-          padding: "10px 12px",
-          borderRadius: 8,
-          border: "1px solid #444",
-          background: "#232526",
+          fontSize: 16,
+          padding: "12px 14px",
+          borderRadius: 10,
+          border: "1px solid #333742",
+          background: "#181a1f",
           color: "#fff",
           outline: "none",
-          boxSizing: "border-box"
+          boxSizing: "border-box",
+          transition: "border-color 0.2s ease, box-shadow 0.2s ease"
         }}
         autoComplete="off"
       />
@@ -121,9 +122,9 @@ export default function GuessBar({ songs, onGuess, disabled }) {
           ref={dropdownRef}
           className="custom-scrollbar"
           style={{
-            background: "#232526",
-            border: "1px solid #444",
-            borderRadius: 8,
+            background: "#181a1f",
+            border: "1px solid #333742",
+            borderRadius: 10,
             marginTop: 4,
             position: "absolute",
             zIndex: 100,
@@ -133,7 +134,7 @@ export default function GuessBar({ songs, onGuess, disabled }) {
             overflowY: "auto",
             overscrollBehavior: "contain",
             WebkitOverflowScrolling: "touch",
-            boxShadow: "0 10px 30px rgba(0, 0, 0, 0.7)"
+            boxShadow: "0 12px 36px rgba(0, 0, 0, 0.75)"
           }}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}

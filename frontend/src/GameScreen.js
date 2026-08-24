@@ -16,21 +16,24 @@ export default function GameScreen(props) {
   return (
     <div style={{
       minHeight: "100vh",
-      background: "linear-gradient(135deg, #232526 0%, #414345 100%)",
+      background: "linear-gradient(135deg, #121316 0%, #1c1e24 100%)",
       display: "flex",
       alignItems: "center",
-      justifyContent: "center"
+      justifyContent: "center",
+      padding: "20px 0"
     }}>
       <div style={{
-        background: "rgba(30,32,36,0.97)",
-        borderRadius: 20,
-        boxShadow: "0 8px 32px 0 rgba(31,38,135,0.37)",
-        padding: 40,
-        width: 480,
-        maxWidth: "95vw",
+        background: "rgba(26, 28, 34, 0.96)",
+        borderRadius: 24,
+        boxShadow: "0 12px 40px 0 rgba(0, 0, 0, 0.6), 0 0 1px 1px rgba(255, 94, 58, 0.15)",
+        border: "1px solid rgba(255, 94, 58, 0.12)",
+        padding: "36px 32px",
+        width: 440,
+        maxWidth: "92vw",
         display: "flex",
         flexDirection: "column",
-        alignItems: "center"
+        alignItems: "center",
+        boxSizing: "border-box"
       }}>
         <Player
           audioRef={audioRef}
@@ -80,25 +83,26 @@ export default function GameScreen(props) {
             style={{
               marginTop: 12,
               width: "100%",
-              background: "#e74c3c",
-              color: "#fff",
-              fontWeight: "bold",
-              fontSize: 16,
-              border: "none",
-              borderRadius: 8,
+              background: "#24181a",
+              color: "#ff7675",
+              fontWeight: "600",
+              fontSize: 15,
+              border: "1px solid rgba(231, 76, 60, 0.35)",
+              borderRadius: 10,
               padding: "10px 0",
-              cursor: "pointer"
+              cursor: "pointer",
+              boxSizing: "border-box"
             }}
           >
             Give Up & Reveal Song
           </button>
         )}
-        {/* ...rest of your game UI, feedback, history, etc... */}
         {guessFeedback && (
           <div style={{
-            color: guessedCorrectly ? "#2ecc71" : "#e74c3c",
-            fontWeight: "bold",
-            marginTop: 8,
+            color: guessedCorrectly ? "#FF9500" : "#ff6b6b",
+            fontWeight: "700",
+            fontSize: 16,
+            marginTop: 12,
             textAlign: "center"
           }}>
             {guessFeedback}
@@ -106,32 +110,37 @@ export default function GameScreen(props) {
         )}
         {guessedCorrectly && (
           <div style={{
-            marginTop: 12,
+            marginTop: 14,
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            textAlign: "center"
+            textAlign: "center",
+            width: "100%"
           }}>
             {albumCover && (
               <img
                 src={albumCover}
                 alt="Album Artwork"
                 style={{
-                  width: 130,
-                  height: 130,
-                  borderRadius: 12,
-                  boxShadow: "0 8px 24px rgba(0, 0, 0, 0.6)",
+                  width: 140,
+                  height: 140,
+                  borderRadius: 14,
+                  boxShadow: "0 8px 24px rgba(255, 94, 58, 0.25), 0 4px 12px rgba(0,0,0,0.6)",
                   objectFit: "cover",
-                  marginBottom: 10,
-                  border: "1px solid rgba(255, 255, 255, 0.1)"
+                  marginBottom: 12,
+                  border: "1px solid rgba(255, 149, 0, 0.3)"
                 }}
               />
             )}
             <div style={{
-              color: "#2ecc71",
-              fontWeight: "bold",
-              fontSize: 18,
-              textAlign: "center"
+              background: "linear-gradient(135deg, #FF5E3A 0%, #FF9500 100%)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              fontWeight: "800",
+              fontSize: 20,
+              textAlign: "center",
+              letterSpacing: "-0.3px",
+              padding: "0 10px"
             }}>
               <span dir="auto" style={{ unicodeBidi: "isolate" }}>
                 {reverseHebrewWords(currentSong)}
@@ -143,22 +152,24 @@ export default function GameScreen(props) {
           <div style={{
             marginTop: 16,
             width: "100%",
-            background: "#232526",
-            borderRadius: 8,
-            padding: 12,
-            color: "#fff",
-            fontSize: 15,
+            background: "#181a1f",
+            borderRadius: 10,
+            border: "1px solid #282b35",
+            padding: "12px 14px",
+            color: "#e1e3e8",
+            fontSize: 14,
             maxHeight: 120,
-            overflowY: "auto"
-          }}>
-            <div style={{ fontWeight: "bold", marginBottom: 6 }}>History:</div>
+            overflowY: "auto",
+            boxSizing: "border-box"
+          }} className="custom-scrollbar">
+            <div style={{ fontWeight: "700", color: "#8a8f9d", fontSize: 12, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 6 }}>Guess History:</div>
             {guessHistory.map((entry, idx) =>
               entry.type === "guess" ? (
-                <div key={idx} style={{ color: entry.correct ? "#2ecc71" : "#e74c3c" }}>
+                <div key={idx} style={{ color: entry.correct ? "#FF9500" : "#ff6b6b", marginBottom: 3 }}>
                   Guess: <b><span dir="auto">{reverseHebrewWords(entry.value)}</span></b> {entry.correct ? "✔️" : "❌"}
                 </div>
               ) : (
-                <div key={idx} style={{ color: "#f39c12" }}>
+                <div key={idx} style={{ color: "#FFA07A", marginBottom: 3 }}>
                   <span dir="auto">{reverseHebrewWords(entry.value)}</span>
                 </div>
               )
@@ -170,14 +181,15 @@ export default function GameScreen(props) {
           style={{
             marginTop: 16,
             width: "100%",
-            background: "#444",
-            color: "#fff",
-            fontWeight: "bold",
-            fontSize: 16,
-            border: "none",
-            borderRadius: 8,
+            background: "#22252e",
+            color: "#8a8f9d",
+            fontWeight: "600",
+            fontSize: 14,
+            border: "1px solid #2f333e",
+            borderRadius: 10,
             padding: "10px 0",
-            cursor: "pointer"
+            cursor: "pointer",
+            boxSizing: "border-box"
           }}
         >
           Return to Home Page

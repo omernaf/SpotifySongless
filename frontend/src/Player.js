@@ -20,7 +20,7 @@ export default function Player({
   songs
 }) {
   return (
-    <div style={{ width: "100%", marginTop: 10 }}>
+    <div style={{ width: "100%", marginTop: 4 }}>
       {/* Hidden audio element */}
       <audio
         ref={audioRef}
@@ -33,30 +33,32 @@ export default function Player({
         style={{ display: "none" }}
       />
       {/* Custom controls */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
         <button
           onClick={() => handlePlayPause(!isPlaying)}
           style={{
-            background: "#27ae60",
+            background: "linear-gradient(135deg, #FF5E3A 0%, #FF9500 100%)",
             color: "#fff",
             border: "none",
             borderRadius: "50%",
-            width: 40,
-            height: 40,
+            width: 44,
+            height: 44,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             cursor: "pointer",
             padding: 0,
+            boxShadow: "0 4px 14px rgba(255, 94, 58, 0.4)",
+            flexShrink: 0
           }}
         >
           {isPlaying ? (
             <svg width="20" height="20" viewBox="0 0 20 20">
-              <rect x="3" y="3" width="4" height="14" rx="1.5" fill="white"/>
-              <rect x="13" y="3" width="4" height="14" rx="1.5" fill="white"/>
+              <rect x="4" y="3" width="3.5" height="14" rx="1.5" fill="white"/>
+              <rect x="12.5" y="3" width="3.5" height="14" rx="1.5" fill="white"/>
             </svg>
           ) : (
-            <svg width="20" height="20" viewBox="0 0 20 20">
+            <svg width="20" height="20" viewBox="0 0 20 20" style={{ marginLeft: 2 }}>
               <polygon points="5,3 17,10 5,17" fill="white"/>
             </svg>
           )}
@@ -64,32 +66,41 @@ export default function Player({
         {/* Progress bar */}
         <div style={{ flex: 1, cursor: "pointer" }} onClick={handleProgressBarClick}>
           <div style={{
-            background: "#444",
-            borderRadius: 4,
+            background: "#252830",
+            borderRadius: 6,
             height: 8,
             width: "100%",
-            position: "relative"
+            position: "relative",
+            overflow: "hidden"
           }}>
             <div style={{
-              background: "#2ecc71",
+              background: "linear-gradient(90deg, #FF5E3A 0%, #FF9500 100%)",
               height: 8,
-              borderRadius: 4,
+              borderRadius: 6,
               width: `${
                 getCurrentMax() === Infinity && audioRef.current && !isNaN(audioRef.current.duration)
                   ? Math.min((currentTime / audioRef.current.duration) * 100, 100)
                   : Math.min((currentTime / getCurrentMax()) * 100, 100)
               }%`,
-              transition: "width 0.1s"
+              transition: "width 0.1s linear"
             }} />
           </div>
-          <div style={{ color: "#aaa", fontSize: 12, marginTop: 2 }}>
-            {formatTime(currentTime)} / {
-              getCurrentMax() === Infinity
+          <div style={{
+            color: "#8a8f9d",
+            fontSize: 12,
+            marginTop: 4,
+            fontWeight: "500",
+            display: "flex",
+            justifyContent: "space-between"
+          }}>
+            <span>{formatTime(currentTime)}</span>
+            <span>
+              {getCurrentMax() === Infinity
                 ? (audioRef.current && !isNaN(audioRef.current.duration)
                     ? formatTime(audioRef.current.duration)
                     : "0:30")
-                : formatTime(getCurrentMax())
-            }
+                : formatTime(getCurrentMax())}
+            </span>
           </div>
         </div>
       </div>
@@ -97,16 +108,17 @@ export default function Player({
         <button
           onClick={handleSkip}
           style={{
-            marginTop: 16,
+            marginTop: 14,
             width: "100%",
-            background: "#e67e22",
-            color: "#fff",
-            fontWeight: "bold",
-            fontSize: 18,
-            border: "none",
-            borderRadius: 8,
-            padding: "10px 0",
-            cursor: "pointer"
+            background: "#22252e",
+            color: "#FF9500",
+            fontWeight: "700",
+            fontSize: 16,
+            border: "1px solid rgba(255, 149, 0, 0.4)",
+            borderRadius: 10,
+            padding: "11px 0",
+            cursor: "pointer",
+            boxSizing: "border-box"
           }}
         >
           Skip ({UNLOCK_STEPS[unlockStep]}s → {UNLOCK_STEPS[unlockStep + 1] === Infinity ? "All" : UNLOCK_STEPS[unlockStep + 1] + "s"})
@@ -116,16 +128,18 @@ export default function Player({
         onClick={playAnotherRandom}
         disabled={loading || songs.length === 0}
         style={{
-          marginTop: 16,
+          marginTop: 14,
           width: "100%",
-          background: "#2980b9",
+          background: "linear-gradient(135deg, #FF5E3A 0%, #FF9500 100%)",
           color: "#fff",
-          fontWeight: "bold",
-          fontSize: 18,
+          fontWeight: "700",
+          fontSize: 16,
           border: "none",
-          borderRadius: 8,
-          padding: "10px 0",
-          cursor: loading ? "not-allowed" : "pointer"
+          borderRadius: 10,
+          padding: "11px 0",
+          cursor: loading ? "not-allowed" : "pointer",
+          boxShadow: "0 4px 14px rgba(255, 94, 58, 0.35)",
+          boxSizing: "border-box"
         }}
       >
         Play Another Random Song
