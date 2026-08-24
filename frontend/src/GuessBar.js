@@ -49,7 +49,7 @@ export default function GuessBar({ songs, onGuess, disabled }) {
   };
 
   const handleBlur = () => {
-    setTimeout(() => setShowSuggestions(false), 100);
+    setTimeout(() => setShowSuggestions(false), 150);
   };
 
   const handleSelect = (title) => {
@@ -61,10 +61,12 @@ export default function GuessBar({ songs, onGuess, disabled }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onGuess(input);
-    setInput("");
-    setSuggestions([]);
-    setShowSuggestions(false);
+    if (input.trim()) {
+      onGuess(input);
+      setInput("");
+      setSuggestions([]);
+      setShowSuggestions(false);
+    }
   };
 
   // Trap scroll inside dropdown on mobile
@@ -72,24 +74,24 @@ export default function GuessBar({ songs, onGuess, disabled }) {
     lastY.current = e.touches[0].clientY;
   };
 
-const handleTouchMove = (e) => {
-  const el = dropdownRef.current;
-  if (!el) return;
-  const { scrollTop, scrollHeight, clientHeight } = el;
-  const currentY = e.touches[0].clientY;
-  const isScrollingUp = currentY > lastY.current;
-  const isScrollingDown = currentY < lastY.current;
+  const handleTouchMove = (e) => {
+    const el = dropdownRef.current;
+    if (!el) return;
+    const { scrollTop, scrollHeight, clientHeight } = el;
+    const currentY = e.touches[0].clientY;
+    const isScrollingUp = currentY > lastY.current;
+    const isScrollingDown = currentY < lastY.current;
 
-  const atTop = scrollTop === 0;
-  const atBottom = scrollTop + clientHeight >= scrollHeight;
+    const atTop = scrollTop === 0;
+    const atBottom = scrollTop + clientHeight >= scrollHeight;
 
-  if ((atTop && isScrollingUp) || (atBottom && isScrollingDown)) {
-    // Only prevent scrolling if at edge
-    e.preventDefault();
-  }
+    if ((atTop && isScrollingUp) || (atBottom && isScrollingDown)) {
+      // Only prevent default if at edge
+      e.preventDefault();
+    }
 
-  lastY.current = currentY;
-};
+    lastY.current = currentY;
+  };
 
   return (
     <form onSubmit={handleSubmit} style={{ width: "100%", marginTop: 16, position: "relative" }}>
@@ -110,22 +112,28 @@ const handleTouchMove = (e) => {
           background: "#232526",
           color: "#fff",
           outline: "none",
+          boxSizing: "border-box"
         }}
         autoComplete="off"
       />
       {showSuggestions && suggestions.length > 0 && (
         <div
           ref={dropdownRef}
+          className="custom-scrollbar"
           style={{
             background: "#232526",
             border: "1px solid #444",
             borderRadius: 8,
-            marginTop: 2,
+            marginTop: 4,
             position: "absolute",
-            zIndex: 10,
-            width: "calc(100% - 2px)",
+            zIndex: 100,
+            width: "100%",
+            boxSizing: "border-box",
+            maxHeight: "min(240px, 35vh)",
+            overflowY: "auto",
+            overscrollBehavior: "contain",
             WebkitOverflowScrolling: "touch",
-            touchAction: "pan-y",
+            boxShadow: "0 10px 30px rgba(0, 0, 0, 0.7)"
           }}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
@@ -133,12 +141,12 @@ const handleTouchMove = (e) => {
           {suggestions.map((song, idx) => (
             <div
               key={song.id || song.display + idx}
-              onMouseDown={() => handleSelect(song.display)}
-              style={{
-                padding: "8px 12px",
-                cursor: "pointer",
-                color: "#fff",
+              className="suggestion-item"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                handleSelect(song.display);
               }}
+              onClick={() => handleSelect(song.display)}
             >
               <span dir="auto">{reverseHebrewWords(song.display)}</span>
             </div>
