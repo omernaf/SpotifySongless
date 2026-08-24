@@ -1,15 +1,19 @@
 import os
 import logging
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, HTTPException, Request, Query
+from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import spotipy
 from spotipy.exceptions import SpotifyException
-import imageio_ffmpeg
+import requests
 
 from backend.src.spotify_utils import sp, extract_playlist_id, is_hebrew, reverse_hebrew_words
-from backend.src.download_utils import download_song
+from backend.src.deezer_utils import (
+    get_deezer_preview,
+    extract_deezer_playlist_id,
+    extract_deezer_playlist
+)
 
 # --- Logger setup ---
 logging.basicConfig(
@@ -18,33 +22,17 @@ logging.basicConfig(
 )
 logger = logging.getLogger("spotify_songless")
 
-# Determine if running on Vercel (or use explicit env var)
-# Vercel sets VERCEL=1
-is_vercel = os.environ.get("VERCEL") == "1"
+app = FastAPI(title="SpotifySongless API", version="2.0.0")
 
-# --- FFmpeg Setup for Vercel ---
-# spotdl requires ffmpeg. On Vercel, we use imageio-ffmpeg to provide the binary.
-FFMPEG_PATH = None
-try:
-    FFMPEG_PATH = imageio_ffmpeg.get_ffmpeg_exe()
-    ffmpeg_dir = os.path.dirname(FFMPEG_PATH)
-    os.environ["PATH"] += os.pathsep + ffmpeg_dir
-    logger.info(f"Added ffmpeg to PATH: {ffmpeg_dir}")
-except Exception as e:
-    logger.error(f"Failed to setup ffmpeg: {e}")
-
-app = FastAPI()
-
-# Middleware to strip /api prefix for Vercel
+# Middleware to strip /api prefix for Vercel / reverse proxies
 @app.middleware("http")
 async def strip_api_prefix(request: Request, call_next):
     if request.url.path.startswith("/api"):
-        # Modify the scope directly to strip /api
         request.scope["path"] = request.url.path[4:]
     response = await call_next(request)
     return response
 
-# Allow CORS for local React dev
+# Allow CORS for React frontend
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -53,31 +41,63 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-MUSIC_DIR = "/tmp" if is_vercel else (os.environ.get("MUSIC_DIR") or os.path.abspath(os.path.join(os.path.dirname(__file__), "../music_files")))
-
-# Ensure MUSIC_DIR exists
-if not os.path.exists(MUSIC_DIR):
-    os.makedirs(MUSIC_DIR, exist_ok=True)
-
-# Configure spotdl cache to use /tmp on Vercel
-if is_vercel:
-    os.environ["SPOTDL_CACHE_PATH"] = os.path.join(MUSIC_DIR, ".spotdl_cache")
-    os.environ["XDG_CACHE_HOME"] = os.path.join(MUSIC_DIR, ".cache")
-    os.environ["XDG_CONFIG_HOME"] = os.path.join(MUSIC_DIR, ".config")
-    # CRITICAL: Override HOME to /tmp because many tools (like spotdl/ffmpeg) try to write to ~/.cache or ~/.config
-    os.environ["HOME"] = MUSIC_DIR
-
 class PlaylistRequest(BaseModel):
     url: str
 
-class DownloadRequest(BaseModel):
-    query: str
+class PreviewRequest(BaseModel):
+    query: str = ""
+    artist: str = ""
+    title: str = ""
 
 @app.post("/extract_songs")
 def extract_songs(req: PlaylistRequest):
     logger.info(f"Received playlist extraction request for URL: {req.url}")
+    
+    # Check if URL is Deezer playlist or Spotify playlist
+    deezer_id = extract_deezer_playlist_id(req.url)
+    if deezer_id:
+        logger.info(f"Identified Deezer playlist ID: {deezer_id}")
+        try:
+            res = extract_deezer_playlist(deezer_id)
+            songs = []
+            for track in res["raw_tracks"]:
+                title = track.get("title")
+                artist_info = track.get("artist", {})
+                artist_name = artist_info.get("name", "Unknown Artist")
+                if not title:
+                    continue
+
+                display_text = f"{title} - {artist_name}"
+                if is_hebrew(title) or is_hebrew(artist_name):
+                    display_text = reverse_hebrew_words(display_text)
+                
+                query = f"{title} {artist_name}"
+                songs.append({
+                    "display": display_text,
+                    "query": query,
+                    "title": title,
+                    "artist": artist_name,
+                    "preview_url": track.get("preview")
+                })
+            
+            logger.info(f"Returning {len(songs)} songs from Deezer playlist '{res['name']}'")
+            return {
+                "name": res["name"],
+                "owner": res["owner"],
+                "songs": songs,
+                "url": req.url
+            }
+        except Exception as e:
+            logger.exception("Error extracting Deezer playlist")
+            raise HTTPException(status_code=400, detail=f"Failed to extract Deezer playlist: {str(e)}")
+
+    # Fallback to Spotify playlist extraction
     playlist_id = extract_playlist_id(req.url)
-    logger.info(f"Extracted playlist ID: {playlist_id}")
+    if not playlist_id:
+        logger.warning(f"Could not extract playlist ID from URL: {req.url}")
+        raise HTTPException(status_code=400, detail="Invalid Spotify or Deezer playlist URL")
+
+    logger.info(f"Extracted Spotify playlist ID: {playlist_id}")
     try:
         playlist = sp.playlist(playlist_id)
         name = playlist.get("name", "Unknown Playlist")
@@ -87,24 +107,43 @@ def extract_songs(req: PlaylistRequest):
         # Fetch all tracks (pagination)
         tracks = []
         results = sp.playlist_tracks(playlist_id, limit=100, offset=0)
-        tracks.extend(results["items"])
-        logger.info(f"Fetched {len(results['items'])} tracks (first page)")
-        while results["next"]:
-            results = sp.next(results)
+        if results and "items" in results:
             tracks.extend(results["items"])
-            logger.info(f"Fetched {len(results['items'])} more tracks (pagination)")
+            logger.info(f"Fetched {len(results['items'])} tracks (first page)")
+            while results.get("next"):
+                results = sp.next(results)
+                if results and "items" in results:
+                    tracks.extend(results["items"])
+                    logger.info(f"Fetched {len(results['items'])} more tracks (pagination)")
 
         songs = []
         for item in tracks:
-            track = item["track"]
-            display_text = track["name"] + " - " + track["artists"][0]["name"]
-            if is_hebrew(track["name"]) or is_hebrew(track["artists"][0]["name"]):
+            if not item or not isinstance(item, dict):
+                continue
+            track = item.get("track")
+            if not track or not isinstance(track, dict):
+                continue
+            
+            title = track.get("name")
+            artists = track.get("artists")
+            if not title or not artists or not isinstance(artists, list) or len(artists) == 0:
+                continue
+
+            artist_name = artists[0].get("name", "Unknown Artist")
+            display_text = f"{title} - {artist_name}"
+            
+            if is_hebrew(title) or is_hebrew(artist_name):
                 display_text = reverse_hebrew_words(display_text)
-            query = track["name"] + " " + track["artists"][0]["name"]
+            
+            query = f"{title} {artist_name}"
             songs.append({
                 "display": display_text,
-                "query": query
+                "query": query,
+                "title": title,
+                "artist": artist_name,
+                "spotify_id": track.get("id")
             })
+
         logger.info(f"Returning {len(songs)} songs from playlist")
         return {
             "name": name,
@@ -119,73 +158,76 @@ def extract_songs(req: PlaylistRequest):
         logger.exception("Unexpected error during playlist extraction")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/get_preview")
+def get_preview(req: PreviewRequest):
+    logger.info(f"Received preview request: artist='{req.artist}', title='{req.title}', query='{req.query}'")
+    
+    artist = req.artist
+    title = req.title
+    query = req.query
+
+    # Fallback to parsing query if artist/title are empty
+    if (not artist or not title) and query:
+        if " - " in query:
+            parts = query.split(" - ", 1)
+            title = parts[0].strip()
+            artist = parts[1].strip()
+        else:
+            title = query.strip()
+
+    preview_data = get_deezer_preview(artist=artist, title=title, query=query)
+    
+    if not preview_data or not preview_data.get("preview_url"):
+        logger.warning(f"No preview found on Deezer for '{artist}' - '{title}'")
+        raise HTTPException(status_code=404, detail="Preview not available on Deezer")
+
+    logger.info(f"Returning Deezer preview URL: {preview_data['preview_url']}")
+    return {
+        "preview_url": preview_data["preview_url"],
+        "mp3_url": preview_data["preview_url"],  # Backward-compatibility field
+        "title": preview_data.get("title"),
+        "artist": preview_data.get("artist"),
+        "cover_medium": preview_data.get("cover_medium"),
+        "cover_big": preview_data.get("cover_big"),
+        "duration": preview_data.get("duration", 30)
+    }
+
+# Backward compatibility alias for download_mp3
 @app.post("/download_mp3")
-def download_mp3(req: DownloadRequest):
-    logger.info(f"Received MP3 download request for query: {req.query}")
+def download_mp3(req: PreviewRequest):
+    return get_preview(req)
+
+@app.get("/proxy_preview")
+def proxy_preview(url: str = Query(..., description="Deezer preview CDN URL")):
+    """
+    Proxies preview audio from Deezer CDN in case of client-side network or CORS restrictions.
+    """
+    if not url.startswith("https://") or "dzcdn.net" not in url:
+        raise HTTPException(status_code=400, detail="Invalid preview URL")
+    
     try:
-        mp3_path = download_song(req.query, output_dir=MUSIC_DIR, ffmpeg_path=FFMPEG_PATH)
-        logger.info(f"download_song returned path: {mp3_path}")
-        if not mp3_path or not os.path.exists(mp3_path):
-            logger.error(f"Download failed. mp3_path: {mp3_path}")
-            raise HTTPException(status_code=500, detail="Download failed")
-        filename = os.path.basename(mp3_path)
-        logger.info(f"MP3 file ready: {filename}")
-        return {"mp3_url": f"/music/{filename}"}
+        resp = requests.get(url, stream=True, timeout=10)
+        return StreamingResponse(
+            resp.iter_content(chunk_size=8192),
+            media_type="audio/mpeg",
+            headers={
+                "Accept-Ranges": "bytes",
+                "Content-Type": "audio/mpeg",
+                "Cache-Control": "public, max-age=3600"
+            }
+        )
     except Exception as e:
-        logger.exception("Exception in download_mp3")
-        
-        # Diagnostic: Check if tools are runnable
-        diagnostics = ""
-        try:
-            import subprocess
-            import sys
-            
-            # Check spotdl version
-            spotdl_ver = subprocess.run([sys.executable, "-m", "spotdl", "--version"], capture_output=True, text=True)
-            diagnostics += f"\nSpotdl Version Check: ReturnCode={spotdl_ver.returncode}, Stdout={spotdl_ver.stdout}, Stderr={spotdl_ver.stderr}"
-            
-            # Check yt-dlp version
-            ytdlp_ver = subprocess.run([sys.executable, "-m", "yt_dlp", "--version"], capture_output=True, text=True)
-            diagnostics += f"\nyt-dlp Version Check: ReturnCode={ytdlp_ver.returncode}, Stdout={ytdlp_ver.stdout}, Stderr={ytdlp_ver.stderr}"
-
-            # Check ffmpeg version using the discovered path
-            if FFMPEG_PATH and os.path.exists(FFMPEG_PATH):
-                ffmpeg_ver = subprocess.run([FFMPEG_PATH, "-version"], capture_output=True, text=True)
-                diagnostics += f"\nFFmpeg Version Check: ReturnCode={ffmpeg_ver.returncode}, Stdout={ffmpeg_ver.stdout[:100]}..., Stderr={ffmpeg_ver.stderr[:100]}..."
-            else:
-                diagnostics += f"\nFFmpeg Path Check: FFMPEG_PATH={FFMPEG_PATH}, Exists={os.path.exists(FFMPEG_PATH) if FFMPEG_PATH else 'N/A'}"
-            
-        except Exception as diag_e:
-            diagnostics += f"\nDiagnostics failed: {str(diag_e)}"
-
-        raise HTTPException(status_code=500, detail=f"Download failed: {str(e)}\nDiagnostics: {diagnostics}")
-
-@app.get("/music/{filename}")
-def get_mp3(filename: str):
-    file_path = os.path.join(MUSIC_DIR, filename)
-    logger.info(f"Serving MP3 file: {file_path}")
-    if not os.path.exists(file_path):
-        logger.warning(f"File not found: {file_path}")
-        raise HTTPException(status_code=404, detail="File not found")
-    return FileResponse(file_path, media_type="audio/mpeg", filename=filename)
+        logger.error(f"Error proxying Deezer preview: {e}")
+        raise HTTPException(status_code=502, detail="Failed to proxy preview stream")
 
 @app.post("/delete_mp3")
 async def delete_mp3(request: Request):
-    data = await request.json()
-    filename = data.get("filename")
-    logger.info(f"Received delete request for filename: {filename}")
-    if not filename:
-        logger.warning("No filename provided in delete request")
-        return {"status": "error", "detail": "No filename provided"}
-    file_path = os.path.join(MUSIC_DIR, filename)
-    if os.path.exists(file_path):
-        os.remove(file_path)
-        logger.info(f"Deleted file: {file_path}")
-        return {"status": "deleted"}
-    logger.warning(f"File not found for deletion: {file_path}")
-    return {"status": "not_found"}
+    """
+    No-op stub kept for frontend compatibility. Previews are streamed dynamically with no local storage.
+    """
+    return {"status": "ok", "message": "No local file cleanup required"}
 
 if __name__ == "__main__":
     logger.info("Starting FastAPI server...")
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("backend.src.main:app", host="0.0.0.0", port=8000, reload=True)

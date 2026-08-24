@@ -1,10 +1,6 @@
 fastapi
 uvicorn
 spotipy
-pydub
 python-multipart
 requests
-spotdl
 starlette
-imageio-ffmpeg
-yt-dlp

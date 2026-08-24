@@ -2,11 +2,9 @@ services:
   backend:
     build: ./backend
     environment:
-      - MUSIC_DIR=/music_files
       - FRONTEND_ORIGIN=http://localhost
     volumes:
       - ./backend/src:/app
-      - music_files:/music_files
     ports:
       - "8000:8000"
 
@@ -21,6 +19,3 @@ services:
       - "80:80"
     depends_on:
       - backend
-
-volumes:
-  music_files:

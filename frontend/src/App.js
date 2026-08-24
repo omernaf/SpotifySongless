@@ -6,31 +6,11 @@ import LoadingScreen from "./LoadingScreen";
 import GameScreen from "./GameScreen";
 import Cookies from "js-cookie";
 
-// const BACKEND_URL = "http://10.0.2.15:8000";
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:8000";
 console.log(`[SpotifySongless] Frontend configured to use backend at: ${BACKEND_URL}`);
 
-const UNLOCK_STEPS = [0.5, 1, 2, 4, 8, 15, 30, Infinity];
-
-// Helper to extract filename from mp3Url
-function getFilenameFromUrl(mp3Url) {
-  if (!mp3Url) return null;
-  const parts = mp3Url.split("/");
-  return parts[parts.length - 1];
-}
-
-// Call this whenever you want to delete the current song
-async function deleteCurrentSong(mp3Url) {
-  const filename = getFilenameFromUrl(mp3Url);
-  if (!filename) return;
-  try {
-    console.log(`[SpotifySongless] Requesting backend to delete song: ${filename}`);
-    await axios.post(`${BACKEND_URL}/delete_mp3`, { filename });
-    console.log(`[SpotifySongless] Successfully requested deletion for: ${filename}`);
-  } catch (e) {
-    console.error(`[SpotifySongless] Error deleting song: ${filename}`, e);
-  }
-}
+// Previews from Deezer are 30s highlights, so 15s -> Infinity (full preview)
+const UNLOCK_STEPS = [0.5, 1, 2, 4, 8, 15, Infinity];
 
 // Save playlist metadata to cookie
 function savePlaylistToCookie(playlistMeta) {
@@ -87,7 +67,6 @@ function App() {
     }
     setCurrentTime(0);
     setIsPlaying(false);
-    // Do NOT call play() here. Wait for user action or a clear event.
   }, [mp3Url]);
 
   const playRandomSong = async (songsList) => {
@@ -97,21 +76,27 @@ function App() {
     setIsPlaying(false);
     const randomSong = songsList[Math.floor(Math.random() * songsList.length)];
     setCurrentSong(randomSong.display);
-    setStatus("Downloading...");
+    setStatus("Loading preview...");
     setLoading(true);
     try {
-      console.log(`[SpotifySongless] Requesting MP3 download for: ${randomSong.query}`);
-      const res = await axios.post(`${BACKEND_URL}/download_mp3`, { query: randomSong.query });
-      setMp3Url(BACKEND_URL + res.data.mp3_url);
-      console.log(`[SpotifySongless] MP3 download successful. URL: ${BACKEND_URL + res.data.mp3_url}`);
+      console.log(`[SpotifySongless] Requesting preview for: ${randomSong.display}`);
+      const res = await axios.post(`${BACKEND_URL}/get_preview`, {
+        query: randomSong.query,
+        title: randomSong.title,
+        artist: randomSong.artist
+      });
+      const previewUrl = res.data.preview_url || res.data.mp3_url;
+      const audioUrl = previewUrl.startsWith("http") ? previewUrl : `${BACKEND_URL}${previewUrl}`;
+      setMp3Url(audioUrl);
+      console.log(`[SpotifySongless] Preview loaded successfully. URL: ${audioUrl}`);
       setStatus("");
       setPage("game");
     } catch (e) {
-      console.error(`[SpotifySongless] Failed to download MP3 for: ${randomSong.query}`, e);
+      console.error(`[SpotifySongless] Failed to get preview for: ${randomSong.display}`, e);
       if (e.response && e.response.data) {
         console.error("[SpotifySongless] Backend Error Details:", e.response.data);
       }
-      setStatus("Failed to download MP3. Try again.");
+      setStatus("Preview not available for this song. Please try another.");
       setMp3Url("");
       setPage("landing");
     }
@@ -165,9 +150,7 @@ function App() {
     setLoading(false);
   };
 
-  // 1. When playing another random song
-  const playAnotherRandom = async () => {
-    await deleteCurrentSong(mp3Url);
+  const playAnotherRandom = () => {
     setPage("loading");
     setGuessHistory([]);
     setGuessFeedback("");
@@ -205,7 +188,7 @@ function App() {
     }, 100);
   };
 
-  const handleSeek = (e) => {
+  const handleSeek = () => {
     const maxTime = getCurrentMax();
     if (audioRef.current && audioRef.current.currentTime > maxTime) {
       audioRef.current.currentTime = maxTime;
@@ -265,20 +248,7 @@ function App() {
     }
   };
 
-  // 2. When exiting or refreshing (cleanup)
-  useEffect(() => {
-    const handleBeforeUnload = async () => {
-      await deleteCurrentSong(mp3Url);
-    };
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => {
-      handleBeforeUnload();
-      window.removeEventListener("beforeunload", handleBeforeUnload);
-    };
-  }, [mp3Url]);
-
-  const handleReturnToLanding = async () => {
-    await deleteCurrentSong(mp3Url); // Optional: clean up current song
+  const handleReturnToLanding = () => {
     setPage("landing");
   };
 
