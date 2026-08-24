@@ -76,6 +76,10 @@ function App() {
     setCurrentTime(0);
     setIsPlaying(false);
     setAlbumCover("");
+    setGuessedCorrectly(false);
+    setGuessFeedback("");
+    setGuessHistory([]);
+    setGuessBarKey(prev => prev + 1);
     const randomSong = songsList[Math.floor(Math.random() * songsList.length)];
     setCurrentSong(randomSong.display);
     setStatus("Loading preview...");
@@ -116,6 +120,10 @@ function App() {
     setMp3Url("");
     setAlbumCover("");
     setCurrentSong("");
+    setGuessedCorrectly(false);
+    setGuessFeedback("");
+    setGuessHistory([]);
+    setGuessBarKey(prev => prev + 1);
     setUnlockStep(0);
     setCurrentTime(0);
     setIsPlaying(false);
@@ -158,10 +166,6 @@ function App() {
 
   const playAnotherRandom = () => {
     setPage("loading");
-    setGuessHistory([]);
-    setGuessFeedback("");
-    setGuessedCorrectly(false);
-    setGuessBarKey(prev => prev + 1);
     playRandomSong(songs);
   };
 
@@ -262,6 +266,19 @@ function App() {
   };
 
   const handleReturnToLanding = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+    setGuessedCorrectly(false);
+    setGuessFeedback("");
+    setGuessHistory([]);
+    setGuessBarKey(prev => prev + 1);
+    setUnlockStep(0);
+    setCurrentTime(0);
+    setIsPlaying(false);
+    setMp3Url("");
+    setAlbumCover("");
     setPage("landing");
   };
 

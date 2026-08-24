@@ -1,6 +1,9 @@
 import React from "react";
 
 export default function LandingScreen({ playlistUrl, setPlaylistUrl, onStart, status, playlistHistory }) {
+  const supportedPlatforms = ["Spotify", "Apple Music", "YouTube Music", "Deezer"];
+  const isButtonEnabled = playlistUrl && playlistUrl.trim().length > 0;
+
   return (
     <div style={{
       minHeight: "100vh",
@@ -49,18 +52,18 @@ export default function LandingScreen({ playlistUrl, setPlaylistUrl, onStart, st
         </h2>
         <input
           type="text"
-          placeholder="Paste Spotify, Apple Music, YouTube, or Deezer playlist..."
+          placeholder="Paste playlist link..."
           value={playlistUrl}
           onChange={e => setPlaylistUrl(e.target.value)}
           style={{
             width: "100%",
             padding: "13px 14px",
-            fontSize: 15,
+            fontSize: 16,
             borderRadius: 10,
             border: "1px solid #333742",
             background: "#181a1f",
             color: "#fff",
-            marginBottom: 16,
+            marginBottom: 10,
             outline: "none",
             boxSizing: "border-box",
             transition: "border-color 0.2s ease, box-shadow 0.2s ease"
@@ -74,6 +77,37 @@ export default function LandingScreen({ playlistUrl, setPlaylistUrl, onStart, st
             e.target.style.boxShadow = "none";
           }}
         />
+
+        {/* Supported Platforms Tags */}
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 6,
+          flexWrap: "wrap",
+          marginBottom: 16,
+          width: "100%"
+        }}>
+          <span style={{ color: "#7a7f8d", fontSize: 12, fontWeight: "500" }}>Supported:</span>
+          {supportedPlatforms.map((platform) => (
+            <span
+              key={platform}
+              style={{
+                background: "#181a1f",
+                border: "1px solid rgba(255, 94, 58, 0.22)",
+                color: "#c8ccd8",
+                borderRadius: 6,
+                padding: "2px 8px",
+                fontSize: 11,
+                fontWeight: "500",
+                letterSpacing: "0.2px"
+              }}
+            >
+              {platform}
+            </span>
+          ))}
+        </div>
+
         {playlistHistory.length > 0 && (
           <div style={{ marginBottom: 16, width: "100%" }}>
             <div style={{ color: "#8a8f9d", fontSize: 13, fontWeight: "600", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.5px" }}>Recent Playlists:</div>
@@ -109,24 +143,31 @@ export default function LandingScreen({ playlistUrl, setPlaylistUrl, onStart, st
             </div>
           </div>
         )}
+
         <button
           onClick={onStart}
+          disabled={!isButtonEnabled}
           style={{
             width: "100%",
-            background: "linear-gradient(135deg, #FF5E3A 0%, #FF9500 100%)",
-            color: "#fff",
+            background: isButtonEnabled
+              ? "linear-gradient(135deg, #FF5E3A 0%, #FF9500 100%)"
+              : "#21242b",
+            color: isButtonEnabled ? "#ffffff" : "#5d6270",
             fontWeight: "700",
             fontSize: 17,
-            border: "none",
+            border: isButtonEnabled ? "none" : "1px solid #2e323b",
             borderRadius: 10,
             padding: "13px 0",
-            cursor: "pointer",
-            boxShadow: "0 4px 16px rgba(255, 94, 58, 0.35)",
-            boxSizing: "border-box"
+            cursor: isButtonEnabled ? "pointer" : "not-allowed",
+            boxShadow: isButtonEnabled ? "0 4px 18px rgba(255, 94, 58, 0.4)" : "none",
+            boxSizing: "border-box",
+            transition: "all 0.25s ease",
+            opacity: isButtonEnabled ? 1 : 0.7
           }}
         >
           Start Game
         </button>
+
         {status && (
           <div style={{ color: "#ff6b6b", marginTop: 14, fontSize: 14, textAlign: "center" }}>
             {status}
