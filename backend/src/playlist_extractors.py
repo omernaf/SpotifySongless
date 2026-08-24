@@ -4,10 +4,19 @@ import logging
 import requests
 from urllib.parse import urlparse, parse_qs
 
-from backend.src.spotify_utils import sp, extract_playlist_id, is_hebrew, reverse_hebrew_words, resolve_music_url
+from backend.src.spotify_utils import (
+    sp,
+    extract_playlist_id,
+    extract_album_id,
+    is_hebrew,
+    reverse_hebrew_words,
+    resolve_music_url
+)
 from backend.src.deezer_utils import (
     extract_deezer_playlist_id,
     extract_deezer_playlist,
+    extract_deezer_album_id,
+    extract_deezer_album,
     clean_track_title
 )
 
@@ -46,9 +55,9 @@ def clean_youtube_title(title: str, artist: str = "") -> str:
 
 def extract_apple_music_playlist(url: str) -> dict:
     """
-    Extracts songs and thumbnail from public Apple Music playlist URL.
+    Extracts songs and thumbnail from public Apple Music playlist or album URL.
     """
-    logger.info(f"Extracting Apple Music playlist from: {url}")
+    logger.info(f"Extracting Apple Music playlist/album from: {url}")
     resp = requests.get(url, headers=HEADERS, timeout=12)
     if resp.status_code != 200:
         raise Exception(f"Apple Music returned HTTP {resp.status_code}")
@@ -66,10 +75,10 @@ def extract_apple_music_playlist(url: str) -> dict:
         # Fallback to schema.org scripts
         schema_scripts = re.findall(r'<script\b[^>]*>([\s\S]*?)</script>', resp.text)
         for s in schema_scripts:
-            if "schema.org" in s and "MusicPlaylist" in s:
+            if "schema.org" in s and ("MusicPlaylist" in s or "MusicAlbum" in s):
                 try:
                     data = json.loads(s.strip())
-                    name = data.get("name", "Apple Music Playlist")
+                    name = data.get("name", "Apple Music")
                     tracks = []
                     for t in data.get("track", []):
                         t_name = t.get("name")
@@ -81,12 +90,12 @@ def extract_apple_music_playlist(url: str) -> dict:
                         return {"name": name, "owner": "Apple Music", "thumbnail": thumbnail, "tracks": tracks}
                 except Exception:
                     pass
-        raise Exception("Could not find playlist data in Apple Music page")
+        raise Exception("Could not find playlist or album data in Apple Music page")
 
     data = json.loads(match.group(1).strip())
     sections = data.get("data", [{}])[0].get("data", {}).get("sections", [])
     
-    name = "Apple Music Playlist"
+    name = "Apple Music"
     owner = "Apple Music"
     tracks = []
 
@@ -109,12 +118,12 @@ def extract_apple_music_playlist(url: str) -> dict:
                 if t:
                     tracks.append({"title": t, "artist": a or "Unknown Artist"})
 
-    logger.info(f"Extracted {len(tracks)} tracks from Apple Music playlist '{name}'")
+    logger.info(f"Extracted {len(tracks)} tracks from Apple Music '{name}'")
     return {"name": name, "owner": owner, "thumbnail": thumbnail, "tracks": tracks}
 
 def extract_youtube_playlist(url: str) -> dict:
     """
-    Extracts songs and thumbnail from public YouTube or YouTube Music playlist URL.
+    Extracts songs and thumbnail from public YouTube or YouTube Music playlist/album URL.
     """
     logger.info(f"Extracting YouTube/YouTube Music playlist from: {url}")
     
@@ -150,7 +159,7 @@ def extract_youtube_playlist(url: str) -> dict:
     data = json.loads(m.group(1))
 
     # Extract playlist name
-    name = "YouTube Playlist"
+    name = "YouTube Music"
     try:
         name = data["metadata"]["playlistMetadataRenderer"]["title"]
     except Exception:
@@ -205,18 +214,18 @@ def extract_youtube_playlist(url: str) -> dict:
         return res
 
     tracks = find_videos(data)
-    logger.info(f"Extracted {len(tracks)} tracks from YouTube playlist '{name}'")
+    logger.info(f"Extracted {len(tracks)} tracks from YouTube '{name}'")
     return {"name": name, "owner": "YouTube", "thumbnail": thumbnail, "tracks": tracks}
 
 def extract_universal_playlist(url: str) -> dict:
     """
-    Unified entry point for playlist extraction.
+    Unified entry point for playlist and album extraction.
     Supports Spotify, Deezer, Apple Music, and YouTube Music / YouTube URLs.
     """
     resolved_url = resolve_music_url(url)
     lower_url = resolved_url.lower()
 
-    # 1. Deezer
+    # 1. Deezer (Playlist or Album)
     deezer_id = extract_deezer_playlist_id(resolved_url)
     if deezer_id:
         res = extract_deezer_playlist(deezer_id)
@@ -246,8 +255,37 @@ def extract_universal_playlist(url: str) -> dict:
             "url": url
         }
 
-    # 2. Apple Music
-    if "music.apple.com" in lower_url and "/playlist/" in lower_url:
+    deezer_album_id = extract_deezer_album_id(resolved_url)
+    if deezer_album_id:
+        res = extract_deezer_album(deezer_album_id)
+        songs = []
+        for track in res["raw_tracks"]:
+            title = track.get("title")
+            artist_name = track.get("artist", {}).get("name", res["owner"] or "Unknown Artist")
+            if not title:
+                continue
+
+            display_text = f"{title} - {artist_name}"
+            if is_hebrew(title) or is_hebrew(artist_name):
+                display_text = reverse_hebrew_words(display_text)
+            
+            songs.append({
+                "display": display_text,
+                "query": f"{title} {artist_name}",
+                "title": title,
+                "artist": artist_name,
+                "preview_url": track.get("preview")
+            })
+        return {
+            "name": res["name"],
+            "owner": res["owner"],
+            "thumbnail": res.get("thumbnail"),
+            "songs": songs,
+            "url": url
+        }
+
+    # 2. Apple Music (Playlist or Album)
+    if "music.apple.com" in lower_url and ("/playlist/" in lower_url or "/album/" in lower_url):
         res = extract_apple_music_playlist(resolved_url)
         songs = []
         for track in res["tracks"]:
@@ -270,8 +308,8 @@ def extract_universal_playlist(url: str) -> dict:
             "url": url
         }
 
-    # 3. YouTube / YouTube Music
-    if ("youtube.com" in lower_url or "youtu.be" in lower_url or "music.youtube.com" in lower_url) and ("list=" in lower_url or "/playlist" in lower_url):
+    # 3. YouTube / YouTube Music (Playlist or Album)
+    if ("youtube.com" in lower_url or "youtu.be" in lower_url or "music.youtube.com" in lower_url) and ("list=" in lower_url or "/playlist" in lower_url or "/album" in lower_url or "/browse" in lower_url):
         res = extract_youtube_playlist(resolved_url)
         songs = []
         for track in res["tracks"]:
@@ -294,7 +332,7 @@ def extract_universal_playlist(url: str) -> dict:
             "url": url
         }
 
-    # 4. Spotify
+    # 4. Spotify (Playlist or Album)
     playlist_id = extract_playlist_id(resolved_url)
     if playlist_id:
         playlist = sp.playlist(playlist_id)
@@ -347,4 +385,53 @@ def extract_universal_playlist(url: str) -> dict:
             "url": url
         }
 
-    raise Exception("Unsupported or invalid playlist URL. Supported: Spotify, Deezer, Apple Music, YouTube Music.")
+    album_id = extract_album_id(resolved_url)
+    if album_id:
+        album = sp.album(album_id)
+        name = album.get("name", "Unknown Album")
+        owner = album.get("artists", [{}])[0].get("name", "")
+        images = album.get("images", [])
+        thumbnail = images[0].get("url") if images and len(images) > 0 else None
+
+        tracks = []
+        results = sp.album_tracks(album_id, limit=50, offset=0)
+        if results and "items" in results:
+            tracks.extend(results["items"])
+            while results.get("next"):
+                results = sp.next(results)
+                if results and "items" in results:
+                    tracks.extend(results["items"])
+
+        songs = []
+        for track in tracks:
+            if not track or not isinstance(track, dict):
+                continue
+            
+            title = track.get("name")
+            artists = track.get("artists")
+            if not title or not artists or not isinstance(artists, list) or len(artists) == 0:
+                continue
+
+            artist_name = artists[0].get("name", owner or "Unknown Artist")
+            display_text = f"{title} - {artist_name}"
+            
+            if is_hebrew(title) or is_hebrew(artist_name):
+                display_text = reverse_hebrew_words(display_text)
+            
+            songs.append({
+                "display": display_text,
+                "query": f"{title} {artist_name}",
+                "title": title,
+                "artist": artist_name,
+                "spotify_id": track.get("id")
+            })
+
+        return {
+            "name": name,
+            "owner": owner,
+            "thumbnail": thumbnail,
+            "songs": songs,
+            "url": url
+        }
+
+    raise Exception("Unsupported or invalid music URL. Supported: Spotify, Deezer, Apple Music, YouTube Music playlists and albums.")

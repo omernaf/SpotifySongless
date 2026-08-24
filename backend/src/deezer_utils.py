@@ -90,6 +90,43 @@ def extract_deezer_playlist(playlist_id: str) -> dict:
         "raw_tracks": raw_tracks
     }
 
+def extract_deezer_album_id(url_or_id: str) -> str | None:
+    """
+    Extracts numerical Deezer album ID from URL or raw ID string.
+    """
+    if not url_or_id:
+        return None
+    url_or_id = url_or_id.strip()
+    match = re.search(r'deezer\.com/(?:[a-z]{2}/)?album/(\d+)', url_or_id)
+    if match:
+        return match.group(1)
+    return None
+
+def extract_deezer_album(album_id: str) -> dict:
+    """
+    Fetches full Deezer album with tracks and metadata.
+    """
+    session = requests.Session()
+    session.headers.update({"User-Agent": "SpotifySongless/2.0"})
+
+    meta_resp = session.get(f"https://api.deezer.com/album/{album_id}", timeout=10)
+    meta = meta_resp.json()
+    if "error" in meta:
+        raise Exception(f"Deezer album error: {meta['error'].get('message')}")
+    
+    name = meta.get("title", "Unknown Album")
+    owner = meta.get("artist", {}).get("name", "")
+    thumbnail = meta.get("cover_medium") or meta.get("cover_big") or meta.get("cover_small")
+    
+    raw_tracks = meta.get("tracks", {}).get("data", [])
+    
+    return {
+        "name": name,
+        "owner": owner,
+        "thumbnail": thumbnail,
+        "raw_tracks": raw_tracks
+    }
+
 def get_deezer_preview(artist: str = "", title: str = "", query: str = "") -> dict | None:
     """
     Searches Deezer for a track and returns preview info.

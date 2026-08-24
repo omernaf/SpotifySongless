@@ -115,7 +115,10 @@ function App() {
     setLoading(false);
   };
 
-  const handleStart = async () => {
+  const handleStart = async (overrideUrl) => {
+    const targetUrl = (typeof overrideUrl === "string" ? overrideUrl : playlistUrl).trim();
+    if (!targetUrl) return;
+    setPlaylistUrl(targetUrl);
     setPage("loading");
     setStatus("");
     setLoading(true);
@@ -131,8 +134,8 @@ function App() {
     setCurrentTime(0);
     setIsPlaying(false);
     try {
-      console.log(`[SpotifySongless] Requesting playlist extraction for URL: ${playlistUrl}`);
-      const res = await axios.post(`${BACKEND_URL}/extract_songs`, { url: playlistUrl });
+      console.log(`[SpotifySongless] Requesting playlist extraction for URL: ${targetUrl}`);
+      const res = await axios.post(`${BACKEND_URL}/extract_songs`, { url: targetUrl });
       setSongs(res.data.songs);
       console.log(`[SpotifySongless] Received ${res.data.songs.length} songs from backend`);
       if (res.data.songs.length === 0) {
@@ -140,7 +143,7 @@ function App() {
         setPage("landing");
       } else {
         const playlistMeta = {
-          url: playlistUrl,
+          url: targetUrl,
           name: res.data.name || "Unknown Playlist",
           owner: res.data.owner || "",
           songCount: res.data.songs.length,

@@ -15,17 +15,20 @@ sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
 def resolve_music_url(url: str) -> str:
     """
     Expands shortened URLs (such as spotify.link, spotify.app.link, spoti.fi, deezer.page.link)
-    by following HTTP redirects or parsing canonical playlist meta tags.
+    by following HTTP redirects or parsing canonical meta tags for playlists and albums.
     """
     if not url:
         return ""
     
     url = url.strip()
 
-    # Handle spotify:playlist:URI format
+    # Handle spotify:playlist: or spotify:album: URI formats
     if url.startswith("spotify:playlist:"):
         playlist_id = url.split(":")[-1]
         return f"https://open.spotify.com/playlist/{playlist_id}"
+    if url.startswith("spotify:album:"):
+        album_id = url.split(":")[-1]
+        return f"https://open.spotify.com/album/{album_id}"
 
     if not url.startswith("http://") and not url.startswith("https://"):
         url = "https://" + url
@@ -33,8 +36,8 @@ def resolve_music_url(url: str) -> str:
     parsed = urlparse(url)
     hostname = parsed.netloc.lower()
 
-    # If it's already an open.spotify.com/playlist/ or deezer.com/playlist/ URL, return directly
-    if ("open.spotify.com" in hostname or "deezer.com" in hostname) and "/playlist/" in url:
+    # If it's already an open.spotify.com or deezer.com URL with /playlist/ or /album/, return directly
+    if ("open.spotify.com" in hostname or "deezer.com" in hostname) and ("/playlist/" in url or "/album/" in url):
         return url
 
     # Follow redirects for shortened domains
@@ -46,20 +49,20 @@ def resolve_music_url(url: str) -> str:
         resp = requests.get(url, headers=headers, allow_redirects=True, timeout=10)
         final_url = resp.url
 
-        if "/playlist/" in final_url:
+        if "/playlist/" in final_url or "/album/" in final_url:
             return final_url
 
-        # Check HTML for og:url or embedded playlist links if redirected to intermediary landing page
+        # Check HTML for og:url or embedded links if redirected to intermediary landing page
         if resp.text:
             og_match = re.search(r'<meta\s+property=["\']og:url["\']\s+content=["\']([^"\']+)["\']', resp.text, re.IGNORECASE)
-            if og_match and "/playlist/" in og_match.group(1):
+            if og_match and ("/playlist/" in og_match.group(1) or "/album/" in og_match.group(1)):
                 return og_match.group(1)
 
-            spotify_match = re.search(r'https?://open\.spotify\.com/playlist/([a-zA-Z0-9]+)', resp.text)
+            spotify_match = re.search(r'https?://open\.spotify\.com/(playlist|album)/([a-zA-Z0-9]+)', resp.text)
             if spotify_match:
                 return spotify_match.group(0)
 
-            deezer_match = re.search(r'https?://(?:www\.)?deezer\.com/(?:[a-z]{2}/)?playlist/(\d+)', resp.text)
+            deezer_match = re.search(r'https?://(?:www\.)?deezer\.com/(?:[a-z]{2}/)?(playlist|album)/(\d+)', resp.text)
             if deezer_match:
                 return deezer_match.group(0)
 
@@ -69,6 +72,10 @@ def resolve_music_url(url: str) -> str:
 
 def extract_playlist_id(url):
     match = re.search(r'playlist/([a-zA-Z0-9]+)', url)
+    return match.group(1) if match else None
+
+def extract_album_id(url):
+    match = re.search(r'album/([a-zA-Z0-9]+)', url)
     return match.group(1) if match else None
 
 def is_hebrew(text):
