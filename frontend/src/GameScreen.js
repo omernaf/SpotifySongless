@@ -7,7 +7,7 @@ export default function GameScreen(props) {
   const {
     mp3Url, audioRef, isPlaying, currentTime, getCurrentMax, formatTime,
     handlePlayPause, handleProgressBarClick, handleSkip, handleTimeUpdate, handleSeek,
-    unlockStep, UNLOCK_STEPS, loading, playAnotherRandom, songs, guessBarKey,
+    unlockStep, UNLOCK_STEPS, loading, playAnotherRandom, songs, currentPlaylist, guessBarKey,
     guessedCorrectly, guessFeedback, setGuessFeedback, guessHistory, handleGuess, currentSong, albumCover,
     setUnlockStep, setGuessedCorrectly, setGuessHistory,
     onReturnToLanding,
@@ -27,7 +27,7 @@ export default function GameScreen(props) {
         borderRadius: 24,
         boxShadow: "0 12px 40px 0 rgba(0, 0, 0, 0.6), 0 0 1px 1px rgba(255, 94, 58, 0.15)",
         border: "1px solid rgba(255, 94, 58, 0.12)",
-        padding: "36px 32px",
+        padding: "32px 28px",
         width: 440,
         maxWidth: "92vw",
         display: "flex",
@@ -35,6 +35,75 @@ export default function GameScreen(props) {
         alignItems: "center",
         boxSizing: "border-box"
       }}>
+        {/* Playlist Info Banner */}
+        {currentPlaylist && currentPlaylist.name && (
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            width: "100%",
+            marginBottom: 16,
+            padding: "10px 14px",
+            background: "#181a1f",
+            borderRadius: 12,
+            border: "1px solid rgba(255, 94, 58, 0.15)",
+            boxSizing: "border-box"
+          }}>
+            {currentPlaylist.thumbnail ? (
+              <img
+                src={currentPlaylist.thumbnail}
+                alt={currentPlaylist.name}
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 8,
+                  objectFit: "cover",
+                  flexShrink: 0,
+                  boxShadow: "0 4px 10px rgba(0, 0, 0, 0.4)",
+                  border: "1px solid rgba(255, 94, 58, 0.25)"
+                }}
+              />
+            ) : (
+              <div style={{
+                width: 44,
+                height: 44,
+                borderRadius: 8,
+                background: "linear-gradient(135deg, #FF5E3A 0%, #FF9500 100%)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#fff",
+                fontSize: 18,
+                flexShrink: 0
+              }}>
+                🎵
+              </div>
+            )}
+            <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
+              <div style={{
+                color: "#ffffff",
+                fontWeight: "700",
+                fontSize: 15,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap"
+              }}>
+                {currentPlaylist.name}
+              </div>
+              <div style={{
+                color: "#8a8f9d",
+                fontSize: 12,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap"
+              }}>
+                {currentPlaylist.owner ? `by ${currentPlaylist.owner}` : "Playlist"}
+                {typeof currentPlaylist.songCount === "number" && ` • ${currentPlaylist.songCount} songs`}
+              </div>
+            </div>
+          </div>
+        )}
+
         <Player
           audioRef={audioRef}
           mp3Url={mp3Url}

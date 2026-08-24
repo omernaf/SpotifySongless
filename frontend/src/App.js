@@ -12,6 +12,8 @@ console.log(`[SpotifySongless] Frontend configured to use backend at: ${BACKEND_
 // Previews from Deezer are 30s highlights, so 15s -> Infinity (full preview)
 const UNLOCK_STEPS = [0.5, 1, 2, 4, 8, 15, Infinity];
 
+const MAX_SAVED_PLAYLISTS = 5;
+
 // Save playlist metadata to cookie
 function savePlaylistToCookie(playlistMeta) {
   if (!playlistMeta || !playlistMeta.url) return;
@@ -21,7 +23,7 @@ function savePlaylistToCookie(playlistMeta) {
   } catch { }
   history = history.filter(item => item.url !== playlistMeta.url);
   history.unshift(playlistMeta);
-  if (history.length > 3) history = history.slice(0, 3);
+  if (history.length > MAX_SAVED_PLAYLISTS) history = history.slice(0, MAX_SAVED_PLAYLISTS);
   Cookies.set("playlistHistory", JSON.stringify(history), { expires: 365 });
   console.log(`[SpotifySongless] Saved playlist to cookie:`, playlistMeta);
 }
@@ -54,6 +56,7 @@ function App() {
   const [guessHistory, setGuessHistory] = useState([]);
   const [guessBarKey, setGuessBarKey] = useState(0);
   const [playlistHistory, setPlaylistHistory] = useState([]);
+  const [currentPlaylist, setCurrentPlaylist] = useState({ name: "", owner: "", thumbnail: "", songCount: 0 });
   const [albumCover, setAlbumCover] = useState("");
   const audioRef = useRef(null);
 
@@ -141,9 +144,11 @@ function App() {
           name: res.data.name || "Unknown Playlist",
           owner: res.data.owner || "",
           songCount: res.data.songs.length,
+          thumbnail: res.data.thumbnail || "",
         };
         savePlaylistToCookie(playlistMeta);
         setPlaylistHistory(getPlaylistHistoryFromCookie());
+        setCurrentPlaylist(playlistMeta);
         playRandomSong(res.data.songs);
       }
     } catch (e) {
@@ -279,6 +284,7 @@ function App() {
     setIsPlaying(false);
     setMp3Url("");
     setAlbumCover("");
+    setCurrentPlaylist({ name: "", owner: "", thumbnail: "", songCount: 0 });
     setPage("landing");
   };
 
@@ -301,6 +307,7 @@ function App() {
       loading={loading}
       playAnotherRandom={playAnotherRandom}
       songs={songs}
+      currentPlaylist={currentPlaylist}
       guessBarKey={guessBarKey}
       guessedCorrectly={guessedCorrectly}
       guessFeedback={guessFeedback}

@@ -111,32 +111,63 @@ export default function LandingScreen({ playlistUrl, setPlaylistUrl, onStart, st
         {playlistHistory.length > 0 && (
           <div style={{ marginBottom: 16, width: "100%" }}>
             <div style={{ color: "#8a8f9d", fontSize: 13, fontWeight: "600", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.5px" }}>Recent Playlists:</div>
-            <div style={{ maxHeight: 150, overflowY: "auto" }} className="custom-scrollbar">
+            <div style={{ maxHeight: "min(190px, 28vh)", overflowY: "auto", overscrollBehavior: "contain" }} className="custom-scrollbar">
               {playlistHistory.map((item, idx) => (
                 <button
                   key={idx}
                   onClick={() => setPlaylistUrl(item.url)}
                   style={{
                     width: "100%",
-                    marginBottom: 6,
+                    marginBottom: 8,
                     background: "#1c1e24",
                     color: "#FFA07A",
                     border: "1px solid rgba(255, 107, 53, 0.25)",
-                    borderRadius: 8,
-                    padding: "8px 12px",
+                    borderRadius: 10,
+                    padding: "8px 10px",
                     cursor: "pointer",
                     fontSize: 13,
                     textAlign: "left",
                     display: "flex",
-                    flexDirection: "column",
-                    gap: 2,
+                    alignItems: "center",
+                    gap: 10,
                     boxSizing: "border-box"
                   }}
                 >
-                  <b style={{ color: "#fff" }}>{item.name}</b>
-                  <div style={{ display: "flex", justifyContent: "space-between", color: "#8a8f9d", fontSize: 12 }}>
-                    <span>{item.owner ? `by ${item.owner}` : ""}</span>
-                    {typeof item.songCount === "number" && <span>{item.songCount} songs</span>}
+                  {item.thumbnail ? (
+                    <img
+                      src={item.thumbnail}
+                      alt={item.name}
+                      style={{
+                        width: 38,
+                        height: 38,
+                        borderRadius: 8,
+                        objectFit: "cover",
+                        flexShrink: 0,
+                        border: "1px solid rgba(255, 94, 58, 0.2)"
+                      }}
+                    />
+                  ) : (
+                    <div style={{
+                      width: 38,
+                      height: 38,
+                      borderRadius: 8,
+                      background: "linear-gradient(135deg, #FF5E3A 0%, #FF9500 100%)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "#fff",
+                      fontSize: 16,
+                      flexShrink: 0
+                    }}>
+                      🎵
+                    </div>
+                  )}
+                  <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
+                    <b style={{ color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</b>
+                    <div style={{ display: "flex", justifyContent: "space-between", color: "#8a8f9d", fontSize: 12 }}>
+                      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.owner ? `by ${item.owner}` : ""}</span>
+                      {typeof item.songCount === "number" && <span style={{ flexShrink: 0 }}>{item.songCount} songs</span>}
+                    </div>
                   </div>
                 </button>
               ))}

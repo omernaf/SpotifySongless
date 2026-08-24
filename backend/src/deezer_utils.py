@@ -81,9 +81,12 @@ def extract_deezer_playlist(playlist_id: str) -> dict:
         if url:
             time.sleep(0.05) # Rate limit safety
 
+    thumbnail = meta.get("picture_medium") or meta.get("picture_big") or meta.get("picture_small")
+
     return {
         "name": name,
         "owner": owner,
+        "thumbnail": thumbnail,
         "raw_tracks": raw_tracks
     }
 

@@ -46,12 +46,20 @@ def clean_youtube_title(title: str, artist: str = "") -> str:
 
 def extract_apple_music_playlist(url: str) -> dict:
     """
-    Extracts songs from public Apple Music playlist URL.
+    Extracts songs and thumbnail from public Apple Music playlist URL.
     """
     logger.info(f"Extracting Apple Music playlist from: {url}")
     resp = requests.get(url, headers=HEADERS, timeout=12)
     if resp.status_code != 200:
         raise Exception(f"Apple Music returned HTTP {resp.status_code}")
+
+    # Extract thumbnail from OpenGraph meta
+    thumbnail = None
+    og_m = re.search(r'<meta[^>]*property=["\']og:image["\'][^>]*content=["\']([^"\']+)["\']', resp.text)
+    if not og_m:
+        og_m = re.search(r'<meta[^>]*content=["\']([^"\']+)["\'][^>]*property=["\']og:image["\']', resp.text)
+    if og_m:
+        thumbnail = og_m.group(1)
 
     match = re.search(r'<script[^>]*id=["\']serialized-server-data["\'][^>]*>([\s\S]*?)</script>', resp.text)
     if not match:
@@ -70,7 +78,7 @@ def extract_apple_music_playlist(url: str) -> dict:
                         if t_name:
                             tracks.append({"title": t_name, "artist": a_name})
                     if tracks:
-                        return {"name": name, "owner": "Apple Music", "tracks": tracks}
+                        return {"name": name, "owner": "Apple Music", "thumbnail": thumbnail, "tracks": tracks}
                 except Exception:
                     pass
         raise Exception("Could not find playlist data in Apple Music page")
@@ -86,6 +94,10 @@ def extract_apple_music_playlist(url: str) -> dict:
         sec_id = sec.get("id", "")
         if "header" in sec_id and sec.get("items"):
             name = sec["items"][0].get("title", name)
+            # Try getting high-res artwork URL if available
+            art = sec["items"][0].get("artwork", {}).get("url")
+            if art:
+                thumbnail = art.replace("{w}x{h}bb.jpg", "300x300bb.jpg").replace("{w}x{h}bb.png", "300x300bb.png")
         if "track-list" in sec_id or sec_id.startswith("track-"):
             for it in sec.get("items", []):
                 t = it.get("title")
@@ -98,11 +110,11 @@ def extract_apple_music_playlist(url: str) -> dict:
                     tracks.append({"title": t, "artist": a or "Unknown Artist"})
 
     logger.info(f"Extracted {len(tracks)} tracks from Apple Music playlist '{name}'")
-    return {"name": name, "owner": owner, "tracks": tracks}
+    return {"name": name, "owner": owner, "thumbnail": thumbnail, "tracks": tracks}
 
 def extract_youtube_playlist(url: str) -> dict:
     """
-    Extracts songs from public YouTube or YouTube Music playlist URL.
+    Extracts songs and thumbnail from public YouTube or YouTube Music playlist URL.
     """
     logger.info(f"Extracting YouTube/YouTube Music playlist from: {url}")
     
@@ -120,6 +132,14 @@ def extract_youtube_playlist(url: str) -> dict:
     resp = requests.get(fetch_url, headers=HEADERS, timeout=12)
     if resp.status_code != 200:
         raise Exception(f"YouTube returned HTTP {resp.status_code}")
+
+    # Extract thumbnail from OpenGraph meta
+    thumbnail = None
+    og_m = re.search(r'<meta[^>]*property=["\']og:image["\'][^>]*content=["\']([^"\']+)["\']', resp.text)
+    if not og_m:
+        og_m = re.search(r'<meta[^>]*content=["\']([^"\']+)["\'][^>]*property=["\']og:image["\']', resp.text)
+    if og_m:
+        thumbnail = og_m.group(1).replace("&amp;", "&")
 
     m = re.search(r'ytInitialData\s*=\s*({[\s\S]+?});\s*</script>', resp.text)
     if not m:
@@ -186,7 +206,7 @@ def extract_youtube_playlist(url: str) -> dict:
 
     tracks = find_videos(data)
     logger.info(f"Extracted {len(tracks)} tracks from YouTube playlist '{name}'")
-    return {"name": name, "owner": "YouTube", "tracks": tracks}
+    return {"name": name, "owner": "YouTube", "thumbnail": thumbnail, "tracks": tracks}
 
 def extract_universal_playlist(url: str) -> dict:
     """
@@ -221,6 +241,7 @@ def extract_universal_playlist(url: str) -> dict:
         return {
             "name": res["name"],
             "owner": res["owner"],
+            "thumbnail": res.get("thumbnail"),
             "songs": songs,
             "url": url
         }
@@ -244,6 +265,7 @@ def extract_universal_playlist(url: str) -> dict:
         return {
             "name": res["name"],
             "owner": res["owner"],
+            "thumbnail": res.get("thumbnail"),
             "songs": songs,
             "url": url
         }
@@ -267,6 +289,7 @@ def extract_universal_playlist(url: str) -> dict:
         return {
             "name": res["name"],
             "owner": res["owner"],
+            "thumbnail": res.get("thumbnail"),
             "songs": songs,
             "url": url
         }
@@ -277,6 +300,8 @@ def extract_universal_playlist(url: str) -> dict:
         playlist = sp.playlist(playlist_id)
         name = playlist.get("name", "Unknown Playlist")
         owner = playlist.get("owner", {}).get("display_name", "")
+        images = playlist.get("images", [])
+        thumbnail = images[0].get("url") if images and len(images) > 0 else None
 
         tracks = []
         results = sp.playlist_tracks(playlist_id, limit=100, offset=0)
@@ -317,6 +342,7 @@ def extract_universal_playlist(url: str) -> dict:
         return {
             "name": name,
             "owner": owner,
+            "thumbnail": thumbnail,
             "songs": songs,
             "url": url
         }
