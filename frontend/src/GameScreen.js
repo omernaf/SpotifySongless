@@ -8,7 +8,7 @@ export default function GameScreen(props) {
     mp3Url, audioRef, isPlaying, currentTime, getCurrentMax, formatTime,
     handlePlayPause, handleProgressBarClick, handleSkip, handleTimeUpdate, handleSeek,
     unlockStep, UNLOCK_STEPS, loading, playAnotherRandom, songs, guessBarKey,
-    guessedCorrectly, guessFeedback, guessHistory, handleGuess, currentSong,
+    guessedCorrectly, guessFeedback, setGuessFeedback, guessHistory, handleGuess, currentSong,
     setUnlockStep, setGuessedCorrectly, setGuessHistory,
     onReturnToLanding,
   } = props;
@@ -46,26 +46,36 @@ export default function GameScreen(props) {
           handleSeek={handleSeek}
           unlockStep={unlockStep}
           UNLOCK_STEPS={UNLOCK_STEPS}
+          guessedCorrectly={guessedCorrectly}
           loading={loading}
           playAnotherRandom={playAnotherRandom}
           songs={songs}
         />
-        <GuessBar
-          key={guessBarKey}
-          songs={songs}
-          onGuess={handleGuess}
-          disabled={guessedCorrectly}
-        />
+        {!guessedCorrectly && (
+          <GuessBar
+            key={guessBarKey}
+            songs={songs}
+            onGuess={handleGuess}
+            disabled={guessedCorrectly}
+          />
+        )}
         {/* Give Up Button */}
         {!guessedCorrectly && (
           <button
             onClick={() => {
               setUnlockStep(UNLOCK_STEPS.length - 1);
               setGuessedCorrectly(true);
+              setGuessFeedback("");
               setGuessHistory(prev => [
                 ...prev,
                 { type: "giveup", value: "Gave up and revealed the song!" }
               ]);
+              setTimeout(() => {
+                if (audioRef.current) {
+                  audioRef.current.play();
+                  handlePlayPause(true);
+                }
+              }, 100);
             }}
             style={{
               marginTop: 12,

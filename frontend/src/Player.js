@@ -14,7 +14,7 @@ export default function Player({
   handleSeek,
   unlockStep,
   UNLOCK_STEPS,
-  currentSong,
+  guessedCorrectly,
   loading,
   playAnotherRandom,
   songs
@@ -87,21 +87,13 @@ export default function Player({
               getCurrentMax() === Infinity
                 ? (audioRef.current && !isNaN(audioRef.current.duration)
                     ? formatTime(audioRef.current.duration)
-                    : "...")
+                    : "0:30")
                 : formatTime(getCurrentMax())
             }
           </div>
         </div>
       </div>
-      <div style={{
-        marginTop: 8,
-        color: "#2ecc71",
-        fontWeight: "bold",
-        textAlign: "center"
-      }}>
-        {currentSong}
-      </div>
-      {unlockStep < UNLOCK_STEPS.length - 1 && (
+      {!guessedCorrectly && unlockStep < UNLOCK_STEPS.length - 1 && (
         <button
           onClick={handleSkip}
           style={{

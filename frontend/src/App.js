@@ -236,7 +236,14 @@ function App() {
     if (guess.trim().toLowerCase() === currentSong.trim().toLowerCase()) {
       setGuessFeedback("🎉 Correct!");
       setGuessedCorrectly(true);
+      setUnlockStep(UNLOCK_STEPS.length - 1);
       setGuessHistory(prev => [...prev, { type: "guess", value: guess, correct: true }]);
+      setTimeout(() => {
+        if (audioRef.current) {
+          audioRef.current.play();
+          setIsPlaying(true);
+        }
+      }, 100);
     } else {
       setGuessFeedback("❌ Try again!");
       setGuessedCorrectly(false);
@@ -274,6 +281,7 @@ function App() {
       guessBarKey={guessBarKey}
       guessedCorrectly={guessedCorrectly}
       guessFeedback={guessFeedback}
+      setGuessFeedback={setGuessFeedback}
       guessHistory={guessHistory}
       handleGuess={handleGuess}
       currentSong={currentSong}
