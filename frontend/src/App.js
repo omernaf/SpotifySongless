@@ -54,6 +54,7 @@ function App() {
   const [guessHistory, setGuessHistory] = useState([]);
   const [guessBarKey, setGuessBarKey] = useState(0);
   const [playlistHistory, setPlaylistHistory] = useState([]);
+  const [albumCover, setAlbumCover] = useState("");
   const audioRef = useRef(null);
 
   useEffect(() => {
@@ -74,6 +75,7 @@ function App() {
     setUnlockStep(0);
     setCurrentTime(0);
     setIsPlaying(false);
+    setAlbumCover("");
     const randomSong = songsList[Math.floor(Math.random() * songsList.length)];
     setCurrentSong(randomSong.display);
     setStatus("Loading preview...");
@@ -87,7 +89,9 @@ function App() {
       });
       const previewUrl = res.data.preview_url || res.data.mp3_url;
       const audioUrl = previewUrl.startsWith("http") ? previewUrl : `${BACKEND_URL}${previewUrl}`;
+      const coverUrl = res.data.cover_big || res.data.cover_medium || "";
       setMp3Url(audioUrl);
+      setAlbumCover(coverUrl);
       console.log(`[SpotifySongless] Preview loaded successfully. URL: ${audioUrl}`);
       setStatus("");
       setPage("game");
@@ -98,6 +102,7 @@ function App() {
       }
       setStatus("Preview not available for this song. Please try another.");
       setMp3Url("");
+      setAlbumCover("");
       setPage("landing");
     }
     setLoading(false);
@@ -109,6 +114,7 @@ function App() {
     setLoading(true);
     setSongs([]);
     setMp3Url("");
+    setAlbumCover("");
     setCurrentSong("");
     setUnlockStep(0);
     setCurrentTime(0);
@@ -285,6 +291,7 @@ function App() {
       guessHistory={guessHistory}
       handleGuess={handleGuess}
       currentSong={currentSong}
+      albumCover={albumCover}
       setUnlockStep={setUnlockStep}
       setGuessedCorrectly={setGuessedCorrectly}
       setGuessHistory={setGuessHistory}

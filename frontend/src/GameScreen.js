@@ -8,7 +8,7 @@ export default function GameScreen(props) {
     mp3Url, audioRef, isPlaying, currentTime, getCurrentMax, formatTime,
     handlePlayPause, handleProgressBarClick, handleSkip, handleTimeUpdate, handleSeek,
     unlockStep, UNLOCK_STEPS, loading, playAnotherRandom, songs, guessBarKey,
-    guessedCorrectly, guessFeedback, setGuessFeedback, guessHistory, handleGuess, currentSong,
+    guessedCorrectly, guessFeedback, setGuessFeedback, guessHistory, handleGuess, currentSong, albumCover,
     setUnlockStep, setGuessedCorrectly, setGuessHistory,
     onReturnToLanding,
   } = props;
@@ -106,14 +106,37 @@ export default function GameScreen(props) {
         )}
         {guessedCorrectly && (
           <div style={{
-            color: "#2ecc71",
-            fontWeight: "bold",
-            marginTop: 8,
+            marginTop: 12,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
             textAlign: "center"
           }}>
-            <span dir="auto" style={{ unicodeBidi: "isolate" }}>
-              {reverseHebrewWords(currentSong)}
-            </span>
+            {albumCover && (
+              <img
+                src={albumCover}
+                alt="Album Artwork"
+                style={{
+                  width: 130,
+                  height: 130,
+                  borderRadius: 12,
+                  boxShadow: "0 8px 24px rgba(0, 0, 0, 0.6)",
+                  objectFit: "cover",
+                  marginBottom: 10,
+                  border: "1px solid rgba(255, 255, 255, 0.1)"
+                }}
+              />
+            )}
+            <div style={{
+              color: "#2ecc71",
+              fontWeight: "bold",
+              fontSize: 18,
+              textAlign: "center"
+            }}>
+              <span dir="auto" style={{ unicodeBidi: "isolate" }}>
+                {reverseHebrewWords(currentSong)}
+              </span>
+            </div>
           </div>
         )}
         {guessHistory.length > 0 && (
